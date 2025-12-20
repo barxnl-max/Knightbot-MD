@@ -15,17 +15,15 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "docker:build": "docker build -t docker run -e SESSION_ID=$SESSION_ID knightbot"
   },
-  "keywords": [
-    "whatsapp-bot"
-  ],
+  "keywords": ["whatsapp-bot"],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@hapi/boom": "^10.0.1",
-    "@types/node": "^18.0.6",
-    "@whiskeysockets/baileys": "^v7.0.0-rc.9",
+    "@types/node": "^20.0.0",
+    "@whiskeysockets/baileys": "^8.9.1",
     "awesome-phonenumber": "^5.9.0",
     "axios": "^1.8.4",
     "chalk": "^4.1.2",
@@ -76,6 +74,6 @@
     "jimp": "^1.6.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }
