@@ -156,10 +156,10 @@ global.ytch = "Lydia Bot";
 const channelInfo = {
     contextInfo: {
         forwardingScore: 1,
-        isForwarded: true,
+        isForwarded: false,
         forwardedNewsletterMessageInfo: {
             newsletterJid: '120363423464130445@newsletter',
-            newsletterName: 'Lydia KONTOL',
+            newsletterName: 'Cata anak baik!',
             serverMessageId: -1
         }
     }
@@ -279,6 +279,47 @@ async function handleMessages(sock, messageUpdate, printLog) {
 if (userMessage) {
 
     const responses = {
+        hyper: [
+    'aku juga hyper, sanggup 5 ronde loh 😆',
+    'hyper hyper, 2 ronde udah lemas kau dek-dek 🤬',
+    'energi lu kebanyakan, pake baterai apa 😹',
+    'gas terus tapi jangan sampe tumbang 😅',
+    'tenaga full, otak ketinggalan 😆',
+    'hyper boleh, over pede jangan 😹',
+    'kok bisa seaktif itu sih 😭',
+    'ini orang minum kopi satu termos ya 😅'
+],
+vcs: [
+    'ayo sini kita vcs 😆',
+    'video call sholawat kan manis? 😂',
+    'langsung ngajak tanpa basa-basi 😅',
+    'pelan bang, ini bukan hotline 😹',
+    'niat amat ngajaknya 😆',
+    'baru chat udah vcs 😭',
+    'sabar bang, antri dulu 😅',
+    'kok kepikiran ke situ 😹'
+],
+sange: [
+    'waduh pikirannya lari jauh 😅',
+    'sama, tapi ga diumbar 😭',
+    'woilah kok jujur amat 😋',
+    'minum air dulu biar adem 😆',
+    'otaknya kepencet mode aneh 😹',
+    'fokus napa 😅',
+    'kok ga bisa ditahan 😭',
+    'ini jam rawan pikiran ya 😹',
+    'Mau di kelonin kah'
+],
+bokep: [
+    'astagfirullah 😭',
+    'kok nyasar ke topik bahaya 😅',
+    'fokus bang fokus 😆',
+    'jangan diumbar di sini 😹',
+    'itu tontonan berat 😭',
+    'malah kepikiran begitu 😅',
+    'topik terlarang nih 😆',
+    'udah kebiasaan ya 😹'
+],
         kontol: [
             'waduh mulutnya lepas kendali 😆',
             'kok bisa sefrontal itu 😭',
@@ -289,7 +330,8 @@ if (userMessage) {
             'emosi keburu naik 😹',
             'keyboard jadi korban 😆',
             'kok ga pake rem 😭',
-            'hari ini sensi ya 😹'
+            'hari ini sensi ya 😹',
+            'kamu juga kontol'
         ],
         memek: [
             'mulutnya kelewat jauh 😭',
