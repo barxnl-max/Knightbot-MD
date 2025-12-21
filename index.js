@@ -71,7 +71,7 @@ setInterval(() => {
     }
 }, 30_000) // check every 30 seconds
 
-let phoneNumber = "911234567890"
+let phoneNumber = "6282198571732"
 let owner = JSON.parse(fs.readFileSync('./data/owner.json'))
 
 global.botname = "KNIGHT BOT"
@@ -130,6 +130,41 @@ async function startXeonBotInc() {
         try {
             const mek = chatUpdate.messages[0]
             if (!mek.message) return
+            // jangan respon pesan bot sendiri
+if (mek.key.fromMe) return
+
+const from = mek.key.remoteJid
+const isGroup = from.endsWith('@g.us')
+
+if (isGroup && mek.message.extendedTextMessage) {
+
+    const mentioned =
+        mek.message.extendedTextMessage.contextInfo?.mentionedJid || []
+
+    const botJid = XeonBotInc.user.id.split(':')[0] + '@s.whatsapp.net'
+
+    if (mentioned.includes(botJid)) {
+
+        const replies = [
+            'wkwkw iya kenapa 😆',
+            'eh dipanggil 😳',
+            'hadirrr 🤣',
+            'oi santai dong 😜',
+            'iya iya aku denger 😅',
+            'wkwkw apaan sih'
+        ]
+
+        const reply = replies[Math.floor(Math.random() * replies.length)]
+
+        await XeonBotInc.sendMessage(
+            from,
+            { text: reply },
+            { quoted: mek }
+        )
+
+        return
+    }
+}
             mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
             if (mek.key && mek.key.remoteJid === 'status@broadcast') {
                 await handleStatus(XeonBotInc, chatUpdate);
