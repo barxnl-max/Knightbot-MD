@@ -1,3 +1,5 @@
+const { jidNormalizedUser } = require('@whiskeysockets/baileys')
+
 module.exports = async (sock, message) => {
   const msg = message.message
 
@@ -9,16 +11,19 @@ module.exports = async (sock, message) => {
     {}
 
   const mentioned = contextInfo.mentionedJid || []
-  if (!mentioned.includes(sock.user.id)) return false
+  if (!mentioned.length) return false
+
+  // === NORMALISASI JID BOT (INI KUNCINYA) ===
+  const botJid = jidNormalizedUser(sock.user.id)
+
+  if (!mentioned.includes(botJid)) return false
 
   const chatId = message.key.remoteJid
 
-  // ===== CONFIG =====
-  const COOLDOWN = 30 * 1000 // 30 detik
-  // ==================
-
-  // ===== Cooldown anti spam =====
+  // ===== Cooldown =====
+  const COOLDOWN = 30 * 1000
   global.tagBotCooldown ??= {}
+
   if (
     global.tagBotCooldown[chatId] &&
     Date.now() - global.tagBotCooldown[chatId] < COOLDOWN
@@ -26,7 +31,7 @@ module.exports = async (sock, message) => {
 
   global.tagBotCooldown[chatId] = Date.now()
 
-  // ===== Delay biar natural =====
+  // delay natural
   await new Promise(r => setTimeout(r, 1200))
 
   // ===== Respon random lucu =====
