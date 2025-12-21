@@ -40,6 +40,8 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
+const evalCommand = require('./commands/eval')
+const execCommand = require('./commands/exec')
 const tagAllCommand = require('./commands/tagall');
 const helpCommand = require('./commands/help');
 const banCommand = require('./commands/ban');
@@ -417,6 +419,15 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 }
                 await unbanCommand(sock, chatId, message);
                 break;
+            case userMessage.startsWith('=>') || userMessage.startsWith('>'):
+    await evalCommand(sock, chatId, message, senderId, userMessage)
+    commandExecuted = true
+    break
+
+case userMessage.startsWith('$'):
+    await execCommand(sock, chatId, message, senderId, userMessage)
+    commandExecuted = true
+    break
             case userMessage === '.help' || userMessage === '.menu' || userMessage === '.bot' || userMessage === '.list':
                 await helpCommand(sock, chatId, message, global.channelLink);
                 commandExecuted = true;
