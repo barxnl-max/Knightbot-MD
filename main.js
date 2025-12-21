@@ -227,6 +227,51 @@ async function handleMessages(sock, messageUpdate, printLog) {
             ''
         ).toLowerCase().replace(/\.\s+/g, '.').trim();
 
+      // ========= AUTO RESPON KATA KASAR =========
+if (!message.key.fromMe && userMessage) {
+
+    const autoRespon = {
+        "kontol": [
+            "kamu lebih kontol 🤣",
+            "buset keras amat 😭",
+            "santai bang 😹"
+        ],
+        "anjing": [
+            "anjing anjing apa 😹",
+            "sopan dikit bang 🐶"
+        ],
+        "memek": [
+            "woi jaga mulut 😭",
+            "keras amat ngomongnya 😅"
+        ],
+        "bangsat": [
+            "santai dulu 😹",
+            "emosian amat 🤣"
+        ],
+        "goblok": [
+            "eh jangan gitu 😭",
+            "santai napa 😹"
+        ]
+    }
+
+    for (let kata in autoRespon) {
+        if (userMessage.includes(kata)) {
+
+            let balasan = autoRespon[kata]
+            let reply = balasan[Math.floor(Math.random() * balasan.length)]
+
+            await sock.sendMessage(
+                message.key.remoteJid,
+                { text: reply },
+                { quoted: message }
+            )
+
+            break
+        }
+    }
+}
+// =========================================
+
         // Preserve raw message for commands like .tag that need original casing
         const rawText = message.message?.conversation?.trim() ||
             message.message?.extendedTextMessage?.text?.trim() ||
