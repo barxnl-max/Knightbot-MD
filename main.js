@@ -238,6 +238,38 @@ async function handleMessages(sock, messageUpdate, printLog) {
         if (userMessage.startsWith('.')) {
             console.log(`📝 Command used in ${isGroup ? 'group' : 'private'}: ${userMessage}`);
         }
+        // ===== AUTO REPLY JIKA BOT DI TAG DI GRUP =====
+if (isGroup) {
+
+    const mentionedJid =
+        message.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+
+    const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+
+    if (mentionedJid.includes(botJid)) {
+
+        const replies = [
+            'wkwkw iya kenapa 😆',
+            'eh dipanggil 😳',
+            'hadirrr 🤣',
+            'oi oi rame amat 😜',
+            'iya iya santai 😅',
+            'wkwkw apaan sih'
+        ];
+
+        const reply =
+            replies[Math.floor(Math.random() * replies.length)];
+
+        await sock.sendMessage(
+            chatId,
+            { text: reply },
+            { quoted: message }
+        );
+
+        return; // ⛔ STOP supaya tidak lanjut ke command
+    }
+}
+// =============================================
         // Read bot mode once; don't early-return so moderation can still run in private mode
         let isPublic = true;
         try {
