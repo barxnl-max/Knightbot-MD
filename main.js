@@ -156,7 +156,7 @@ global.ytch = "Lydia Bot";
 const channelInfo = {
     contextInfo: {
         forwardingScore: 1,
-        isForwarded: false,
+        isForwarded: true,
         forwardedNewsletterMessageInfo: {
             newsletterJid: '120363423464130445@newsletter',
             newsletterName: 'Cata anak baik!',
