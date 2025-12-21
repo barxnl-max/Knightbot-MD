@@ -147,7 +147,7 @@ const soraCommand = require('./commands/sora');
 global.packname = settings.packname;
 global.author = settings.author;
 global.channelLink = "https://whatsapp.com/channel/0029VbBixHRCxoAyg44uoi41";
-global.ytch = "Mr Unique Hacker";
+global.ytch = "Lydia Bot";
 
 // Add this near the top of main.js with other global configurations
 const channelInfo = {
@@ -156,7 +156,7 @@ const channelInfo = {
         isForwarded: true,
         forwardedNewsletterMessageInfo: {
             newsletterJid: '120363161513685998@newsletter',
-            newsletterName: 'KnightBot MD',
+            newsletterName: 'Lydia Assistant',
             serverMessageId: -1
         }
     }
