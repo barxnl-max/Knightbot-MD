@@ -40,6 +40,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
+const tagBotCommand = require('./commands/antitagg')
 const evalCommand = require('./commands/eval')
 const execCommand = require('./commands/exec')
 const tagAllCommand = require('./commands/tagall');
@@ -174,6 +175,9 @@ async function handleMessages(sock, messageUpdate, printLog) {
 
         // Handle autoread functionality
         await handleAutoread(sock, message);
+
+        // AUTO REPLY JIKA BOT DI TAG
+        await tagBotCommand(sock, message)
 
         // Store message for antidelete feature
         if (message.message) {
