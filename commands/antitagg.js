@@ -1,26 +1,15 @@
 const { jidNormalizedUser } = require('@whiskeysockets/baileys')
 
-module.exports = async (sock, message) => {
-  const msg = message.message
+module.exports = async (sock, chatId, mentionedJids, message) => {
+  if (!mentionedJids || mentionedJids.length === 0) return false
 
-  // ambil contextInfo dari semua tipe pesan
-  const contextInfo =
-    msg?.extendedTextMessage?.contextInfo ||
-    msg?.imageMessage?.contextInfo ||
-    msg?.videoMessage?.contextInfo ||
-    {}
-
-  const mentioned = contextInfo.mentionedJid || []
-  if (!mentioned.length) return false
-
-  // === NORMALISASI JID BOT (INI KUNCINYA) ===
+  // normalisasi jid bot
   const botJid = jidNormalizedUser(sock.user.id)
 
-  if (!mentioned.includes(botJid)) return false
+  // cek apakah bot di-mention
+  if (!mentionedJids.includes(botJid)) return false
 
-  const chatId = message.key.remoteJid
-
-  // ===== Cooldown =====
+  // ===== cooldown =====
   const COOLDOWN = 30 * 1000
   global.tagBotCooldown ??= {}
 
@@ -34,7 +23,6 @@ module.exports = async (sock, message) => {
   // delay natural
   await new Promise(r => setTimeout(r, 1200))
 
-  // ===== Respon random lucu =====
   const replies = [
     'Heh dipanggil-panggil 😑',
     'Iya iya nongol, sabar napa',
