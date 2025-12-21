@@ -158,7 +158,7 @@ const channelInfo = {
         forwardingScore: 1,
         isForwarded: true,
         forwardedNewsletterMessageInfo: {
-            newsletterJid: '120363161513685998@newsletter',
+            newsletterJid: '120363423464130445@newsletter',
             newsletterName: 'Lydia Assistant',
             serverMessageId: -1
         }
