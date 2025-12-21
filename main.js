@@ -419,15 +419,91 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 }
                 await unbanCommand(sock, chatId, message);
                 break;
-            case userMessage.startsWith('=>') || userMessage.startsWith('>'):
-    await evalCommand(sock, chatId, message, senderId, userMessage)
-    commandExecuted = true
-    break
+            case userMessage.startsWith('=>'):
+case userMessage.startsWith('>'): {
+    if (!message.key.fromMe && !senderIsOwnerOrSudo) {
+        await sock.sendMessage(
+            chatId,
+            { text: 'Only owner/sudo can use eval.' },
+            { quoted: message }
+        )
+        break
+    }
 
-case userMessage.startsWith('$'):
-    await execCommand(sock, chatId, message, senderId, userMessage)
+    const util = require('util')
+
+    const code = userMessage.startsWith('=>')
+        ? userMessage.slice(2).trim()
+        : userMessage.slice(1).trim()
+
+    if (!code) break
+
+    try {
+        let result = await eval(`
+          (async () => {
+            ${code}
+          })()
+        `)
+
+        if (typeof result !== 'string') {
+            result = util.inspect(result, { depth: 1 })
+        }
+
+        await sock.sendMessage(
+            chatId,
+            { text: String(result).slice(0, 4000) },
+            { quoted: message }
+        )
+    } catch (e) {
+        await sock.sendMessage(
+            chatId,
+            { text: String(e) },
+            { quoted: message }
+        )
+    }
+
     commandExecuted = true
     break
+}
+            case userMessage.startsWith('$'): {
+    if (!message.key.fromMe && !senderIsOwnerOrSudo) {
+        await sock.sendMessage(
+            chatId,
+            { text: 'Only owner/sudo can use exec.' },
+            { quoted: message }
+        )
+        break
+    }
+
+    const { exec } = require('child_process')
+    const cmd = userMessage.slice(1).trim()
+    if (!cmd) break
+
+    exec(cmd, async (err, stdout, stderr) => {
+        if (err) {
+            return sock.sendMessage(
+                chatId,
+                { text: err.message },
+                { quoted: message }
+            )
+        }
+        if (stderr) {
+            return sock.sendMessage(
+                chatId,
+                { text: stderr },
+                { quoted: message }
+            )
+        }
+        await sock.sendMessage(
+            chatId,
+            { text: stdout || 'Done' },
+            { quoted: message }
+        )
+    })
+
+    commandExecuted = true
+    break
+            }
             case userMessage === '.help' || userMessage === '.menu' || userMessage === '.bot' || userMessage === '.list':
                 await helpCommand(sock, chatId, message, global.channelLink);
                 commandExecuted = true;
