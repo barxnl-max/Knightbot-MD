@@ -226,52 +226,6 @@ async function handleMessages(sock, messageUpdate, printLog) {
             message.message?.buttonsResponseMessage?.selectedButtonId?.trim() ||
             ''
         ).toLowerCase().replace(/\.\s+/g, '.').trim();
-
-      // ========= AUTO RESPON KATA KASAR =========
-if (!message.key.fromMe && userMessage) {
-
-    const autoRespon = {
-        "kontol": [
-            "kamu lebih kontol 🤣",
-            "buset keras amat 😭",
-            "santai bang 😹"
-        ],
-        "anjing": [
-            "anjing anjing apa 😹",
-            "sopan dikit bang 🐶"
-        ],
-        "memek": [
-            "woi jaga mulut 😭",
-            "keras amat ngomongnya 😅"
-        ],
-        "bangsat": [
-            "santai dulu 😹",
-            "emosian amat 🤣"
-        ],
-        "goblok": [
-            "eh jangan gitu 😭",
-            "santai napa 😹"
-        ]
-    }
-
-    for (let kata in autoRespon) {
-        if (userMessage.includes(kata)) {
-
-            let balasan = autoRespon[kata]
-            let reply = balasan[Math.floor(Math.random() * balasan.length)]
-
-            await sock.sendMessage(
-                message.key.remoteJid,
-                { text: reply },
-                { quoted: message }
-            )
-
-            break
-        }
-    }
-}
-// =========================================
-
         // Preserve raw message for commands like .tag that need original casing
         const rawText = message.message?.conversation?.trim() ||
             message.message?.extendedTextMessage?.text?.trim() ||
@@ -283,38 +237,6 @@ if (!message.key.fromMe && userMessage) {
         if (userMessage.startsWith('.')) {
             console.log(`📝 Command used in ${isGroup ? 'group' : 'private'}: ${userMessage}`);
         }
-        // ===== AUTO REPLY JIKA BOT DI TAG DI GRUP =====
-if (isGroup) {
-
-    const mentionedJid =
-        message.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-
-    const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-
-    if (mentionedJid.includes(botJid)) {
-
-        const replies = [
-            'wkwkw iya kenapa 😆',
-            'eh dipanggil 😳',
-            'hadirrr 🤣',
-            'oi oi rame amat 😜',
-            'iya iya santai 😅',
-            'wkwkw apaan sih'
-        ];
-
-        const reply =
-            replies[Math.floor(Math.random() * replies.length)];
-
-        await sock.sendMessage(
-            chatId,
-            { text: reply },
-            { quoted: message }
-        );
-
-        return; // ⛔ STOP supaya tidak lanjut ke command
-    }
-}
-// =============================================
         // Read bot mode once; don't early-return so moderation can still run in private mode
         let isPublic = true;
         try {
@@ -351,6 +273,33 @@ if (isGroup) {
               });
               return;
           } */
+
+       // Auto response kata kasar (random)
+if (
+    userMessage &&
+    (
+        userMessage.includes('kontol') ||
+        userMessage.includes('memek') ||
+        userMessage.includes('anjing') ||
+        userMessage.includes('bangsat') ||
+        userMessage.includes('goblok')
+    )
+) {
+    const replies = [
+        'kamu lebih kontol 🤣',
+        'buset mulutnya 😭',
+        'santai bang 😹',
+        'keras amat ngomongnya 😅'
+    ];
+
+    const reply = replies[Math.floor(Math.random() * replies.length)];
+
+    await sock.sendMessage(chatId, {
+        text: reply,
+        ...channelInfo
+    });
+    return;
+}
 
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
