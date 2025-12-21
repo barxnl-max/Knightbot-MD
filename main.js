@@ -159,7 +159,7 @@ const channelInfo = {
         isForwarded: true,
         forwardedNewsletterMessageInfo: {
             newsletterJid: '120363423464130445@newsletter',
-            newsletterName: 'Lydia Assistant',
+            newsletterName: 'Lydia KONTOL',
             serverMessageId: -1
         }
     }
@@ -275,31 +275,109 @@ async function handleMessages(sock, messageUpdate, printLog) {
           } */
 
        // Auto response kata kasar (random)
-if (
-    userMessage &&
-    (
-        userMessage.includes('kontol') ||
-        userMessage.includes('memek') ||
-        userMessage.includes('anjing') ||
-        userMessage.includes('bangsat') ||
-        userMessage.includes('goblok')
-    )
-) {
-    const replies = [
-        'kamu lebih kontol 🤣',
-        'buset mulutnya 😭',
-        'santai bang 😹',
-        'keras amat ngomongnya 😅'
-    ];
+  // Auto response kata kasar (lebih RANDOM, minim kembar)
+if (userMessage) {
 
-    const reply = replies[Math.floor(Math.random() * replies.length)];
+    const responses = {
+        kontol: [
+            'waduh mulutnya lepas kendali 😆',
+            'kok bisa sefrontal itu 😭',
+            'santai dikit, ga usah ngegas 😹',
+            'kata-katanya pedes banget 😅',
+            'napas dulu biar adem 😆',
+            'langsung main kasar aja 😭',
+            'emosi keburu naik 😹',
+            'keyboard jadi korban 😆',
+            'kok ga pake rem 😭',
+            'hari ini sensi ya 😹'
+        ],
+        memek: [
+            'mulutnya kelewat jauh 😭',
+            'kok kepikiran ngomong gitu 😅',
+            'sensor dikit napa 😆',
+            'pikiran melayang ke mana-mana 😹',
+            'ini obrolan kok belok 😭',
+            'kata lu bikin kaget 😆',
+            'langsung lompat pagar 😹',
+            'ga ada kata lain kah 😅'
+        ],
+        anjing: [
+            'kok langsung nyolot 😭',
+            'emosi duluan amat 😹',
+            'ngomongnya nyeruduk 😆',
+            'pelan napa 😅',
+            'kata lu panas banget 😭',
+            'langsung naik darah 😹',
+            'tenang dulu bro 😆'
+        ],
+        bangsat: [
+            'waduh meledak 😭',
+            'emosinya keburu nyala 😹',
+            'langsung ngegas 😆',
+            'kok keras gitu 😅',
+            'santai dikit napa 😭',
+            'kata lu nusuk 😹',
+            'hari ini sensitif 😆'
+        ],
+        goblok: [
+            'kok langsung nyerang 😭',
+            'pelan dikit napa 😅',
+            'emosi dulu baru mikir 😹',
+            'kata lu nyentil 😆',
+            'langsung kasar aja 😭',
+            'tenang dulu 😹',
+            'ga usah frontal 😆'
+        ],
+        tolol: [
+            'kok main hantam 😭',
+            'ngomongnya keras amat 😅',
+            'emosi keburu naik 😹',
+            'pelan napa 😆',
+            'langsung tembak 😭',
+            'kata lu nyeletuk 😹',
+            'santai dikit 😆'
+        ],
+        asu: [
+            'waduh ngoko kasar 😹',
+            'emosi wae 😅',
+            'pelan lur 😆',
+            'kok ngamuk 😭',
+            'langsung nyeplos 😹',
+            'kata lu nyelekit 😆'
+        ],
+        babi: [
+            'kok nyasar ke situ 😭',
+            'kasar amat sih 😅',
+            'emosi mulu 😹',
+            'pelan napa 😆',
+            'kata lu bikin kaget 😭',
+            'langsung frontal 😹'
+        ],
+        ngentod: [
+            'waduh langsung lompat 😭',
+            'kok secepat itu 😅',
+            'sensor dikit napa 😆',
+            'emosi keburu nyala 😹',
+            'kata lu bikin shock 😭',
+            'langsung tanpa rem 😆'
+        ]
+    };
 
-    await sock.sendMessage(chatId, {
-        text: reply,
-        ...channelInfo
-    });
-    return;
+    for (const word in responses) {
+        if (userMessage.includes(word)) {
+            const list = responses[word];
+            const reply = list[Math.floor(Math.random() * list.length)];
+
+            await sock.sendMessage(chatId, {
+                text: reply,
+                ...channelInfo
+            }, { quoted: message });
+
+            return;
+        }
+    }
 }
+
 
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
