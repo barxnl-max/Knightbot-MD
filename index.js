@@ -131,39 +131,51 @@ async function startXeonBotInc() {
             const mek = chatUpdate.messages[0]
             if (!mek.message) return
             // jangan respon pesan bot sendiri
-if (mek.key.fromMe) return
+            // ⛔ jangan respon pesan bot sendiri
+// if (mek.key.fromMe) return
 
 const from = mek.key.remoteJid
 const isGroup = from.endsWith('@g.us')
 
-if (isGroup && mek.message.extendedTextMessage) {
+// ambil contextInfo dari semua tipe pesan
+const context =
+    mek.message?.extendedTextMessage?.contextInfo ||
+    mek.message?.imageMessage?.contextInfo ||
+    mek.message?.videoMessage?.contextInfo ||
+    null
 
-    const mentioned =
-        mek.message.extendedTextMessage.contextInfo?.mentionedJid || []
+const mentioned = context?.mentionedJid || []
 
-    const botJid = XeonBotInc.user.id.split(':')[0] + '@s.whatsapp.net'
+// nomor target (ubah 08 → 62)
+const targetNumber = '6285654716030@s.whatsapp.net'
 
-    if (mentioned.includes(botJid)) {
+// jid bot
+const botJid = XeonBotInc.user.id.split(':')[0] + '@s.whatsapp.net'
 
-        const replies = [
-            'wkwkw iya kenapa 😆',
-            'eh dipanggil 😳',
-            'hadirrr 🤣',
-            'oi santai dong 😜',
-            'iya iya aku denger 😅',
-            'wkwkw apaan sih'
-        ]
+// cek kalau target ATAU bot di tag
+if (
+    isGroup &&
+    (mentioned.includes(targetNumber) || mentioned.includes(botJid))
+) {
 
-        const reply = replies[Math.floor(Math.random() * replies.length)]
+    const replies = [
+        'wkwkw dipanggil nih 😆',
+        'eh ada apa sih 🤣',
+        'hadirrrr 😂',
+        'oi jangan tag sembarangan 😜',
+        'aku lagi ngopi wkwkw ☕',
+        'kenapa rame amat 😅'
+    ]
 
-        await XeonBotInc.sendMessage(
-            from,
-            { text: reply },
-            { quoted: mek }
-        )
+    const reply = replies[Math.floor(Math.random() * replies.length)]
 
-        return
-    }
+    await XeonBotInc.sendMessage(
+        from,
+        { text: reply },
+        { quoted: mek }
+    )
+
+    return // ⛔ stop biar ga lanjut ke command
 }
             mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
             if (mek.key && mek.key.remoteJid === 'status@broadcast') {
