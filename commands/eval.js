@@ -1,43 +1,60 @@
-const util = require("util");
-const fs = require("fs");
+const util = require('util')
 
-module.exports = {
-  name: "eval",
-  alias: ["=>", ">"],
-  category: "owner",
-  desc: "Evaluate JavaScript (Owner only)",
-  isOwner: true,
+function autoReturn(code) {
+  const lines = code
+    .split('\n')
+    .map(v => v.trim())
+    .filter(v => v)
 
-  async run({ msg, conn, args }) {
-    if (!args[0]) return msg.reply("Masukkan kode JS");
+  if (lines.length === 0) return code
 
-    let code = args.join(" ");
+  const last = lines[lines.length - 1]
 
-    try {
-      // support await seperti wabot-aq
-      let evaled = await eval(`(async () => { ${code} })()`);
+  // kalau sudah return / throw / await return → skip
+  if (/^(return|throw)/.test(last)) return code
 
-      if (typeof evaled !== "string")
-        evaled = util.inspect(evaled, { depth: 3 });
+  lines[lines.length - 1] = `return (${last})`
+  return lines.join('\n')
+}
 
-      if (evaled.length > 4000) {
-        const file = "./eval-result.txt";
-        fs.writeFileSync(file, evaled);
-        await conn.sendMessage(
-          msg.from,
-          {
-            document: { url: file },
-            fileName: "eval-result.txt",
-            mimetype: "text/plain"
-          },
-          { quoted: msg }
-        );
-        fs.unlinkSync(file);
-      } else {
-        msg.reply(evaled);
-      }
-    } catch (e) {
-      msg.reply(util.format(e));
+module.exports = async (sock, chatId, message, senderId, userMessage) => {
+  const owner = ['6282198571732@s.whatsapp.net'] // GANTI
+  if (!owner.includes(senderId)) return
+
+  let code = ''
+  let isArrow = false
+
+  if (userMessage.startsWith('=>')) {
+    isArrow = true
+    code = userMessage.slice(2).trim()
+  } else if (userMessage.startsWith('>')) {
+    code = userMessage.slice(1).trim()
+  } else return
+
+  if (!code) return
+
+  try {
+    let finalCode = code
+    if (isArrow) {
+      finalCode = autoReturn(code)
     }
+
+    let result = await eval(`
+      (async () => {
+        ${finalCode}
+      })()
+    `)
+
+    if (typeof result !== 'string') {
+      result = util.inspect(result, { depth: 1 })
+    }
+
+    await sock.sendMessage(chatId, {
+      text: String(result).slice(0, 4000)
+    })
+  } catch (e) {
+    await sock.sendMessage(chatId, {
+      text: String(e)
+    })
   }
-};
+}
