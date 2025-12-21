@@ -203,8 +203,8 @@ Join our channel for updates:https://whatsapp.com/channel/0029VbBixHRCxoAyg44uoi
                     forwardingScore: 1,
                     isForwarded: true,
                     forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363161513685998@newsletter',
-                        newsletterName: 'KnightBot MD',
+                        newsletterJid: ' 120363423464130445@newsletter',
+                        newsletterName: 'Lydia Bot by @barxnl250_',
                         serverMessageId: -1
                     }
                 }
@@ -217,8 +217,8 @@ Join our channel for updates:https://whatsapp.com/channel/0029VbBixHRCxoAyg44uoi
                     forwardingScore: 1,
                     isForwarded: true,
                     forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363161513685998@newsletter',
-                        newsletterName: 'KnightBot MD by Mr Unique Hacker',
+                        newsletterJid: ' 120363423464130445@newsletter',
+                        newsletterName: 'Lydia Bot by @barxnl250_',
                         serverMessageId: -1
                     } 
                 }
