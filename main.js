@@ -177,7 +177,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
         await handleAutoread(sock, message);
 
         // AUTO REPLY JIKA BOT DI TAG
-        await tagBotCommand(sock, message)
+        await tagBotCommand(sock, chatId, mentionedJids, message)
 
         // Store message for antidelete feature
         if (message.message) {
