@@ -285,95 +285,6 @@ async function handleMessages(sock, messageUpdate, printLog) {
               return;
           } */
 
-       // Auto response kata kasar (random)
-  
-if (
-    userMessage.startsWith('.addautorespon') &&
-    message.key.fromMe
-) {
-    const text = userMessage.replace('.addautorespon', '').trim()
-
-    if (!text.includes('|')) {
-        await sock.sendMessage(chatId, {
-            text: 'format: .addautorespon kata|respon1, respon2, respon3',
-            ...channelInfo
-        }, { quoted: message })
-        return
-    }
-
-    const [key, value] = text.split('|')
-
-    const kata = key
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase()
-
-    const respon = value
-        .split(',')
-        .map(v => v.replace(/\s+/g, ' ').trim())
-        .filter(Boolean)
-
-    if (!kata || respon.length === 0) {
-        await sock.sendMessage(chatId, {
-            text: 'kata atau respon tidak valid',
-            ...channelInfo
-        }, { quoted: message })
-        return
-    }
-
-    // reload biar sinkron
-    autoRespon = fs.existsSync(autoResponFile)
-        ? JSON.parse(fs.readFileSync(autoResponFile))
-        : {}
-
-    autoRespon[kata] = respon
-    fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
-
-    await sock.sendMessage(chatId, {
-        text: `✅ autorespon "${kata}" berhasil ditambahkan`,
-        ...channelInfo
-    }, { quoted: message })
-
-    return
-}
-if (
-    userMessage.startsWith('.delautorespon') &&
-    message.key.fromMe
-) {
-    autoRespon = JSON.parse(fs.readFileSync(autoResponFile))
-
-    const kata = userMessage
-        .replace('.delautorespon', '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase()
-
-    if (!kata) {
-        await sock.sendMessage(chatId, {
-            text: 'format: .delautorespon kata',
-            ...channelInfo
-        }, { quoted: message })
-        return
-    }
-
-    if (!autoRespon[kata]) {
-        await sock.sendMessage(chatId, {
-            text: `❌ autorespon "${kata}" tidak ditemukan`,
-            ...channelInfo
-        }, { quoted: message })
-        return
-    }
-
-    delete autoRespon[kata]
-    fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
-
-    await sock.sendMessage(chatId, {
-        text: `✅ autorespon "${kata}" dihapus`,
-        ...channelInfo
-    }, { quoted: message })
-
-    return
-}
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
         // Check for bad words and antilink FIRST, before ANY other processing
@@ -865,6 +776,80 @@ case userMessage.startsWith('>'): {
             case userMessage === '.alive':
                 await aliveCommand(sock, chatId, message);
                 break;
+            case userMessage.startsWith('.addautorespon'):
+{
+    const isOwner = message.key.fromMe || senderIsOwnerOrSudo
+    if (!isOwner) {
+        await sock.sendMessage(chatId, { text: 'Only bot owner can use this command!', ...channelInfo }, { quoted: message })
+    } else {
+        const text = userMessage.replace('.addautorespon', '').trim()
+        if (!text.includes('|')) {
+            await sock.sendMessage(chatId, { text: 'format: .addautorespon kata|respon1, respon2', ...channelInfo }, { quoted: message })
+        } else {
+            const [key, value] = text.split('|')
+            const kata = key.replace(/\s+/g, ' ').trim().toLowerCase()
+            const respon = value.split(',').map(v => v.replace(/\s+/g, ' ').trim()).filter(Boolean)
+
+            autoRespon = fs.existsSync(autoResponFile)
+                ? JSON.parse(fs.readFileSync(autoResponFile))
+                : {}
+
+            autoRespon[kata] = respon
+            fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
+
+            await sock.sendMessage(chatId, { text: `✅ autorespon "${kata}" ditambahkan`, ...channelInfo }, { quoted: message })
+        }
+    }
+}
+break;
+
+case userMessage.startsWith('.delautorespon'):
+{
+    const isOwner = message.key.fromMe || senderIsOwnerOrSudo
+    if (!isOwner) {
+        await sock.sendMessage(chatId, { text: 'Only bot owner can use this command!', ...channelInfo }, { quoted: message })
+    } else {
+        const kata = userMessage.replace('.delautorespon', '').replace(/\s+/g, ' ').trim().toLowerCase()
+
+        autoRespon = fs.existsSync(autoResponFile)
+            ? JSON.parse(fs.readFileSync(autoResponFile))
+            : {}
+
+        if (!autoRespon[kata]) {
+            await sock.sendMessage(chatId, { text: `❌ autorespon "${kata}" tidak ditemukan`, ...channelInfo }, { quoted: message })
+        } else {
+            delete autoRespon[kata]
+            fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
+            await sock.sendMessage(chatId, { text: `✅ autorespon "${kata}" dihapus`, ...channelInfo }, { quoted: message })
+        }
+    }
+}
+break;
+
+case userMessage === '.listautorespon':
+{
+    const isOwner = message.key.fromMe || senderIsOwnerOrSudo
+    if (!isOwner) {
+        await sock.sendMessage(chatId, { text: 'Only bot owner can use this command!', ...channelInfo }, { quoted: message })
+    } else {
+        autoRespon = fs.existsSync(autoResponFile)
+            ? JSON.parse(fs.readFileSync(autoResponFile))
+            : {}
+
+        const keys = Object.keys(autoRespon)
+        if (!keys.length) {
+            await sock.sendMessage(chatId, { text: 'Belum ada autorespon', ...channelInfo }, { quoted: message })
+        } else {
+            const list = keys.map((k, i) => `${i + 1}. ${k}`).join('\n')
+            await sock.sendMessage(chatId, { text: `📋 LIST AUTORESPON:\n\n${list}`, ...channelInfo }, { quoted: message })
+        }
+    }
+}
+break;
+
+
+    
+                
             case userMessage.startsWith('.mention '):
                 {
                     const args = userMessage.split(' ').slice(1).join(' ');
