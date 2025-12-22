@@ -279,6 +279,23 @@ async function handleMessages(sock, messageUpdate, printLog) {
 if (userMessage) {
 
     const responses = {
+        ajg: [
+    'kamu lebih ajg',
+    'aduhai ketikannya di jaga😒',
+    'apa nih ajg ajg, gabagus tau😭',
+],
+assalamualaikum: [
+    'waalaikum salam cantik🥰',
+    'waalaikum salam🥰',
+    'waalaikumsalam wr wb.',
+    'waalaikum salam cantik, aduh sopan banget, aku jadiin istri yah'
+],
+salam: [
+    'waalaikum salam cantik🥰',
+    'waalaikum salam🥰',
+    'waalaikumsalam wr wb.',
+    'waalaikum salam cantik, aduh sopan banget, aku jadiin istri yah'
+],
         hyper: [
     'aku juga hyper, sanggup 5 ronde loh 😆',
     'hyper hyper, 2 ronde udah lemas kau dek-dek 🤬',
@@ -379,10 +396,10 @@ bokep: [
             'kata lu nyeletuk 😹',
             'santai dikit 😆'
         ],
-        asu: [
+        bangsat: [
             'waduh ngoko kasar 😹',
             'emosi wae 😅',
-            'pelan lur 😆',
+            'kamu lebih bangsat😂',
             'kok ngamuk 😭',
             'langsung nyeplos 😹',
             'kata lu nyelekit 😆'
