@@ -777,15 +777,15 @@ case userMessage.startsWith('>'): {
                 await aliveCommand(sock, chatId, message);
                 break;
             case userMessage.startsWith('.addautorespon'):
-    const text = userMessage.replace('.addautorespon', '').trim()
+    const textt = userMessage.replace('.addautorespon', '').trim()
 
-    if (!text.includes('|')) {
+    if (!textt.includes('|')) {
         await sock.sendMessage(chatId, {
             text: 'format: .addautorespon kata|respon1, respon2',
             ...channelInfo
         }, { quoted: message })
     } else {
-        const [key, value] = text.split('|')
+        const [key, value] = textt.split('|')
         const kata = key.replace(/\s+/g, ' ').trim().toLowerCase()
         const respon = value
             .split(',')
