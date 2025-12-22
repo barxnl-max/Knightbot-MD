@@ -2,6 +2,17 @@
 const fs = require('fs');
 const path = require('path');
 
+const autoResponFile = './database/autorespon.json'
+let autoRespon = {}
+
+try {
+    if (fs.existsSync(autoResponFile)) {
+        autoRespon = JSON.parse(fs.readFileSync(autoResponFile))
+    }
+} catch {
+    autoRespon = {}
+}
+
 // Redirect temp storage away from system /tmp
 const customTemp = path.join(process.cwd(), 'temp');
 if (!fs.existsSync(customTemp)) fs.mkdirSync(customTemp, { recursive: true });
@@ -275,169 +286,91 @@ async function handleMessages(sock, messageUpdate, printLog) {
           } */
 
        // Auto response kata kasar (random)
-  // Auto response kata kasar (lebih RANDOM, minim kembar)
-if (userMessage) {
+  
+if (
+    userMessage.startsWith('.addautorespon') &&
+    (message.key.fromMe || senderIsOwnerOrSudo)
+) {
+    const text = userMessage.replace('.addautorespon', '').trim()
 
-    const responses = {
-        ajg: [
-    'kamu lebih ajg',
-    'aduhai ketikannya di jaga😒',
-    'apa nih ajg ajg, gabagus tau😭',
-],
-assalamualaikum: [
-    'waalaikum salam cantik🥰',
-    'waalaikum salam🥰',
-    'waalaikumsalam wr wb.',
-    'waalaikum salam cantik, aduh sopan banget, aku jadiin istri yah'
-],
-salam: [
-    'waalaikum salam cantik🥰',
-    'waalaikum salam🥰',
-    'waalaikumsalam wr wb.',
-    'waalaikum salam cantik, aduh sopan banget, aku jadiin istri yah'
-],
-        hyper: [
-    'aku juga hyper, sanggup 5 ronde loh 😆',
-    'hyper hyper, 2 ronde udah lemas kau dek-dek 🤬',
-    'energi lu kebanyakan, pake baterai apa 😹',
-    'gas terus tapi jangan sampe tumbang 😅',
-    'tenaga full, otak ketinggalan 😆',
-    'hyper boleh, over pede jangan 😹',
-    'kok bisa seaktif itu sih 😭',
-    'ini orang minum kopi satu termos ya 😅'
-],
-vcs: [
-    'ayo sini kita vcs 😆',
-    'video call sholawat kan manis? 😂',
-    'langsung ngajak tanpa basa-basi 😅',
-    'pelan bang, ini bukan hotline 😹',
-    'niat amat ngajaknya 😆',
-    'baru chat udah vcs 😭',
-    'sabar bang, antri dulu 😅',
-    'kok kepikiran ke situ 😹'
-],
-sange: [
-    'waduh pikirannya lari jauh 😅',
-    'sama, tapi ga diumbar 😭',
-    'woilah kok jujur amat 😋',
-    'minum air dulu biar adem 😆',
-    'otaknya kepencet mode aneh 😹',
-    'fokus napa 😅',
-    'kok ga bisa ditahan 😭',
-    'ini jam rawan pikiran ya 😹',
-    'Mau di kelonin kah'
-],
-bokep: [
-    'astagfirullah 😭',
-    'kok nyasar ke topik bahaya 😅',
-    'fokus bang fokus 😆',
-    'jangan diumbar di sini 😹',
-    'itu tontonan berat 😭',
-    'malah kepikiran begitu 😅',
-    'topik terlarang nih 😆',
-    'udah kebiasaan ya 😹'
-],
-        kontol: [
-            'waduh mulutnya lepas kendali 😆',
-            'kok bisa sefrontal itu 😭',
-            'santai dikit, ga usah ngegas 😹',
-            'kata-katanya pedes banget 😅',
-            'napas dulu biar adem 😆',
-            'langsung main kasar aja 😭',
-            'emosi keburu naik 😹',
-            'keyboard jadi korban 😆',
-            'kok ga pake rem 😭',
-            'hari ini sensi ya 😹',
-            'kamu juga kontol'
-        ],
-        memek: [
-            'mulutnya kelewat jauh 😭',
-            'kok kepikiran ngomong gitu 😅',
-            'sensor dikit napa 😆',
-            'pikiran melayang ke mana-mana 😹',
-            'ini obrolan kok belok 😭',
-            'kata lu bikin kaget 😆',
-            'langsung lompat pagar 😹',
-            'ga ada kata lain kah 😅'
-        ],
-        anjing: [
-            'kok langsung nyolot 😭',
-            'emosi duluan amat 😹',
-            'ngomongnya nyeruduk 😆',
-            'pelan napa 😅',
-            'kata lu panas banget 😭',
-            'langsung naik darah 😹',
-            'tenang dulu bro 😆'
-        ],
-        bangsat: [
-            'waduh meledak 😭',
-            'emosinya keburu nyala 😹',
-            'langsung ngegas 😆',
-            'kok keras gitu 😅',
-            'santai dikit napa 😭',
-            'kata lu nusuk 😹',
-            'hari ini sensitif 😆'
-        ],
-        goblok: [
-            'kok langsung nyerang 😭',
-            'pelan dikit napa 😅',
-            'emosi dulu baru mikir 😹',
-            'kata lu nyentil 😆',
-            'langsung kasar aja 😭',
-            'tenang dulu 😹',
-            'ga usah frontal 😆'
-        ],
-        tolol: [
-            'kok main hantam 😭',
-            'ngomongnya keras amat 😅',
-            'emosi keburu naik 😹',
-            'pelan napa 😆',
-            'langsung tembak 😭',
-            'kata lu nyeletuk 😹',
-            'santai dikit 😆'
-        ],
-        bangsat: [
-            'waduh ngoko kasar 😹',
-            'emosi wae 😅',
-            'kamu lebih bangsat😂',
-            'kok ngamuk 😭',
-            'langsung nyeplos 😹',
-            'kata lu nyelekit 😆'
-        ],
-        babi: [
-            'kok nyasar ke situ 😭',
-            'kasar amat sih 😅',
-            'emosi mulu 😹',
-            'pelan napa 😆',
-            'kata lu bikin kaget 😭',
-            'langsung frontal 😹'
-        ],
-        ngentod: [
-            'waduh langsung lompat 😭',
-            'kok secepat itu 😅',
-            'sensor dikit napa 😆',
-            'emosi keburu nyala 😹',
-            'kata lu bikin shock 😭',
-            'langsung tanpa rem 😆'
-        ]
-    };
+    if (!text.includes('|')) {
+        await sock.sendMessage(chatId, {
+            text: 'format: .addautorespon kata|respon1, respon2',
+            ...channelInfo
+        }, { quoted: message })
+        return
+    }
 
-    for (const word in responses) {
-        if (userMessage.includes(word)) {
-            const list = responses[word];
-            const reply = list[Math.floor(Math.random() * list.length)];
+    const [key, value] = text.split('|')
+    const kata = key.trim().toLowerCase()
+
+    const respon = value
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean)
+
+    autoRespon[kata] = respon
+    fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
+
+    await sock.sendMessage(chatId, {
+        text: `✅ autorespon "${kata}" ditambahkan`,
+        ...channelInfo
+    }, { quoted: message })
+
+    return
+}
+      if (
+    userMessage.startsWith('.delautorespon') &&
+    (message.key.fromMe || senderIsOwnerOrSudo)
+) {
+    const kata = userMessage.replace('.delautorespon', '').trim().toLowerCase()
+
+    if (!kata) {
+        await sock.sendMessage(chatId, {
+            text: 'format: .delautorespon kata',
+            ...channelInfo
+        }, { quoted: message })
+        return
+    }
+
+    if (!autoRespon[kata]) {
+        await sock.sendMessage(chatId, {
+            text: `❌ autorespon "${kata}" tidak ditemukan`,
+            ...channelInfo
+        }, { quoted: message })
+        return
+    }
+
+    delete autoRespon[kata]
+    fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
+
+    await sock.sendMessage(chatId, {
+        text: `✅ autorespon "${kata}" dihapus`,
+        ...channelInfo
+    }, { quoted: message })
+
+    return
+      }
+
+if (
+    userMessage &&
+    !userMessage.startsWith('.') &&
+    Object.keys(autoRespon).length > 0
+) {
+    for (const kata in autoRespon) {
+        if (userMessage.includes(kata)) {
+            const list = autoRespon[kata]
+            const reply = list[Math.floor(Math.random() * list.length)]
 
             await sock.sendMessage(chatId, {
                 text: reply,
                 ...channelInfo
-            }, { quoted: message });
+            }, { quoted: message })
 
-            return;
+            return
         }
     }
 }
-
-
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
         // Check for bad words and antilink FIRST, before ANY other processing
