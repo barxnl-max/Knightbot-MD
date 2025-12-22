@@ -1,6 +1,6 @@
 const fs = require('fs')
 
-const autoResponFile = './database/autorespon.json'
+const autoResponFile = './data/autorespon.json'
 
 function loadAutoRespon() {
     if (!fs.existsSync(autoResponFile)) return {}
