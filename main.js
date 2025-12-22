@@ -289,41 +289,64 @@ async function handleMessages(sock, messageUpdate, printLog) {
   
 if (
     userMessage.startsWith('.addautorespon') &&
-    (message.key.fromMe || senderIsOwnerOrSudo)
+    message.key.fromMe
 ) {
     const text = userMessage.replace('.addautorespon', '').trim()
 
     if (!text.includes('|')) {
         await sock.sendMessage(chatId, {
-            text: 'format: .addautorespon kata|respon1, respon2',
+            text: 'format: .addautorespon kata|respon1, respon2, respon3',
             ...channelInfo
         }, { quoted: message })
         return
     }
 
     const [key, value] = text.split('|')
-    const kata = key.trim().toLowerCase()
+
+    const kata = key
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase()
 
     const respon = value
         .split(',')
-        .map(v => v.trim())
+        .map(v => v.replace(/\s+/g, ' ').trim())
         .filter(Boolean)
+
+    if (!kata || respon.length === 0) {
+        await sock.sendMessage(chatId, {
+            text: 'kata atau respon tidak valid',
+            ...channelInfo
+        }, { quoted: message })
+        return
+    }
+
+    // reload biar sinkron
+    autoRespon = fs.existsSync(autoResponFile)
+        ? JSON.parse(fs.readFileSync(autoResponFile))
+        : {}
 
     autoRespon[kata] = respon
     fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
 
     await sock.sendMessage(chatId, {
-        text: `✅ autorespon "${kata}" ditambahkan`,
+        text: `✅ autorespon "${kata}" berhasil ditambahkan`,
         ...channelInfo
     }, { quoted: message })
 
     return
 }
-      if (
+if (
     userMessage.startsWith('.delautorespon') &&
-    (message.key.fromMe || senderIsOwnerOrSudo)
+    message.key.fromMe
 ) {
-    const kata = userMessage.replace('.delautorespon', '').trim().toLowerCase()
+    autoRespon = JSON.parse(fs.readFileSync(autoResponFile))
+
+    const kata = userMessage
+        .replace('.delautorespon', '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase()
 
     if (!kata) {
         await sock.sendMessage(chatId, {
@@ -350,26 +373,6 @@ if (
     }, { quoted: message })
 
     return
-      }
-
-if (
-    userMessage &&
-    !userMessage.startsWith('.') &&
-    Object.keys(autoRespon).length > 0
-) {
-    for (const kata in autoRespon) {
-        if (userMessage.includes(kata)) {
-            const list = autoRespon[kata]
-            const reply = list[Math.floor(Math.random() * list.length)]
-
-            await sock.sendMessage(chatId, {
-                text: reply,
-                ...channelInfo
-            }, { quoted: message })
-
-            return
-        }
-    }
 }
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
