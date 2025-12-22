@@ -777,31 +777,34 @@ case userMessage.startsWith('>'): {
                 await aliveCommand(sock, chatId, message);
                 break;
             case userMessage.startsWith('.addautorespon'):
-{
-    const isOwner = message.key.fromMe || senderIsOwnerOrSudo
-    if (!isOwner) {
-        await sock.sendMessage(chatId, { text: 'Only bot owner can use this command!', ...channelInfo }, { quoted: message })
+    const text = userMessage.replace('.addautorespon', '').trim()
+
+    if (!text.includes('|')) {
+        await sock.sendMessage(chatId, {
+            text: 'format: .addautorespon kata|respon1, respon2',
+            ...channelInfo
+        }, { quoted: message })
     } else {
-        const text = userMessage.replace('.addautorespon', '').trim()
-        if (!text.includes('|')) {
-            await sock.sendMessage(chatId, { text: 'format: .addautorespon kata|respon1, respon2', ...channelInfo }, { quoted: message })
-        } else {
-            const [key, value] = text.split('|')
-            const kata = key.replace(/\s+/g, ' ').trim().toLowerCase()
-            const respon = value.split(',').map(v => v.replace(/\s+/g, ' ').trim()).filter(Boolean)
+        const [key, value] = text.split('|')
+        const kata = key.replace(/\s+/g, ' ').trim().toLowerCase()
+        const respon = value
+            .split(',')
+            .map(v => v.replace(/\s+/g, ' ').trim())
+            .filter(Boolean)
 
-            autoRespon = fs.existsSync(autoResponFile)
-                ? JSON.parse(fs.readFileSync(autoResponFile))
-                : {}
+        autoRespon = fs.existsSync(autoResponFile)
+            ? JSON.parse(fs.readFileSync(autoResponFile))
+            : {}
 
-            autoRespon[kata] = respon
-            fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
+        autoRespon[kata] = respon
+        fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
 
-            await sock.sendMessage(chatId, { text: `✅ autorespon "${kata}" ditambahkan`, ...channelInfo }, { quoted: message })
-        }
+        await sock.sendMessage(chatId, {
+            text: `✅ autorespon "${kata}" ditambahkan`,
+            ...channelInfo
+        }, { quoted: message })
     }
-}
-break;
+    break;
 
 case userMessage.startsWith('.delautorespon'):
 {
