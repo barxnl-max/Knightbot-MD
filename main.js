@@ -284,6 +284,38 @@ async function handleMessages(sock, messageUpdate, printLog) {
               });
               return;
           } */
+        if (
+    userMessage.startsWith('.addautorespon') &&
+    (message.key.fromMe || senderIsOwnerOrSudo)
+) {
+    const text = userMessage.replace('.addautorespon', '').trim()
+
+    if (!text.includes('|')) {
+        await sock.sendMessage(chatId, {
+            text: 'format: .addautorespon kata|respon1, respon2',
+            ...channelInfo
+        }, { quoted: message })
+        return
+    }
+
+    const [key, value] = text.split('|')
+    const kata = key.trim().toLowerCase()
+
+    const respon = value
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean)
+
+    autoRespon[kata] = respon
+    fs.writeFileSync(autoResponFile, JSON.stringify(autoRespon, null, 2))
+
+    await sock.sendMessage(chatId, {
+        text: `✅ autorespon "${kata}" ditambahkan`,
+        ...channelInfo
+    }, { quoted: message })
+
+    return
+        }
 
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
@@ -776,7 +808,7 @@ case userMessage.startsWith('>'): {
             case userMessage === '.alive':
                 await aliveCommand(sock, chatId, message);
                 break;
-            case userMessage.startsWith('.addautorespon'):
+            /* case userMessage.startsWith('.addautorespon'):
     const textt = userMessage.replace('.addautorespon', '').trim()
 
     if (!textt.includes('|')) {
@@ -804,7 +836,7 @@ case userMessage.startsWith('>'): {
             ...channelInfo
         }, { quoted: message })
     }
-    break;
+    break; */
 
 case userMessage.startsWith('.delautorespon'):
 {
