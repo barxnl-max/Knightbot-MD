@@ -1,52 +1,55 @@
 const snapsave = require('../lib/snapsave')
 
-module.exports = async function snapsaveCommand(
-    sock,
-    chatId,
-    message,
-    userMessage,
-    channelInfo
-) {
+module.exports = async (sock, chatId, message, userMessage) => {
     try {
-        const args = userMessage.split(' ').slice(1)
-        if (!args.length) {
-            await sock.sendMessage(chatId, {
-                text: '❌ Contoh:\n.snapsave https://instagram.com/xxxx',
-                ...channelInfo
-            }, { quoted: message })
-            return
-        }
-
+        const args = userMessage.trim().split(/\s+/).slice(1)
         const url = args[0]
-        const result = await snapsave(url)
 
-        if (!result.success) {
-            await sock.sendMessage(chatId, {
-                text: `❌ ${result.message}`,
-                ...channelInfo
-            }, { quoted: message })
+        if (!url) {
+            await sock.sendMessage(
+                chatId,
+                { text: 'URL mana?' },
+                { quoted: message }
+            )
             return
         }
 
-        const { media, description, preview } = result.data
+        const res = await snapsave(url)
+        if (!res.success) {
+            await sock.sendMessage(
+                chatId,
+                { text: res.message || 'Gagal mengambil media' },
+                { quoted: message }
+            )
+            return
+        }
 
-        // Kirim satu-satu biar aman
-        for (const item of media) {
-            if (item.type === 'image') {
-                await sock.sendMessage(chatId, {
-                    image: { url: item.url },
-                    caption: description || ''
-                }, { quoted: message })
+        const media = res.data.media
+        if (!media || !media.length) {
+            await sock.sendMessage(
+                chatId,
+                { text: 'Media kosong' },
+                { quoted: message }
+            )
+            return
+        }
+
+        for (const v of media) {
+            if (v.type === 'image') {
+                await sock.sendMessage(
+                    chatId,
+                    { image: { url: v.url } },
+                    { quoted: message }
+                )
             } else {
-                await sock.sendMessage(chatId, {
-                    video: { url: item.url },
-                    caption: description || ''
-                }, { quoted: message })
+                await sock.sendMessage(
+                    chatId,
+                    { video: { url: v.url } },
+                    { quoted: message }
+                )
             }
         }
-
     } catch (e) {
         console.error('SNAPSAVE ERROR:', e)
-        // silent error (tidak spam chat)
     }
 }
