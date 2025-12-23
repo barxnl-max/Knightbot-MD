@@ -1,7 +1,6 @@
 const xvideos = require('../lib/xvideos')
 
-// cache: per chat
-// value: { data: [], expire: timestamp }
+// cache per chat
 const xvCache = new Map()
 
 function setCache(chatId, data) {
@@ -14,12 +13,10 @@ function setCache(chatId, data) {
 function getCache(chatId) {
     const cache = xvCache.get(chatId)
     if (!cache) return null
-
     if (Date.now() > cache.expire) {
         xvCache.delete(chatId)
         return 'expired'
     }
-
     return cache.data
 }
 
@@ -28,32 +25,20 @@ module.exports = async (sock, chatId, message, userMessage) => {
         const text = userMessage.trim()
         const args = text.split(/\s+/)
         const cmd = args[0].toLowerCase()
-        const query = args.slice(1).join(' ')
-
-        const quoted = message.message?.extendedTextMessage?.contextInfo
-        const isReply = !!quoted
-        const isNumber = /^[0-9]+$/.test(text)
 
         // ======================
         // 🔍 SEARCH
         // ======================
         if (cmd === '.xvsearch') {
+            const query = args.slice(1).join(' ')
             if (!query) {
-                await sock.sendMessage(
-                    chatId,
-                    { text: 'Cari apa?' },
-                    { quoted: message }
-                )
+                await sock.sendMessage(chatId, { text: 'Cari apa?' }, { quoted: message })
                 return
             }
 
             const res = await xvideos.search(query)
             if (!Array.isArray(res) || !res.length) {
-                await sock.sendMessage(
-                    chatId,
-                    { text: 'Tidak ada hasil.' },
-                    { quoted: message }
-                )
+                await sock.sendMessage(chatId, { text: 'Tidak ada hasil.' }, { quoted: message })
                 return
             }
 
@@ -62,49 +47,52 @@ module.exports = async (sock, chatId, message, userMessage) => {
 
             let out = `🔎 *Hasil Pencarian*\n\n`
             out += list.map((v, i) =>
-                `*${i + 1}.* ${v.title}
-⏱ ${v.duration} | 📺 ${v.resolution}`
+                `*${i + 1}.* ${v.title}\n⏱ ${v.duration} | 📺 ${v.resolution}`
             ).join('\n\n')
 
-            out += `\n\n↩️ *Reply pesan ini dengan angka (1-${list.length})*\n⏳ Berlaku 2 menit`
+            out += `\n\nKetik: *.getxvideo <nomor>*\nContoh: *.getxvideo 2*\n⏳ Berlaku 2 menit`
 
-            await sock.sendMessage(
-                chatId,
-                { text: out },
-                { quoted: message }
-            )
+            await sock.sendMessage(chatId, { text: out }, { quoted: message })
             return
         }
 
         // ======================
-        // 🔢 ANGKA TANPA REPLY → DIAM
+        // ⬇️ GET VIDEO (TANPA REPLY)
         // ======================
-        if (isNumber && !isReply) {
-            return
-        }
+        if (cmd === '.getxvideo') {
+            const num = args[1]
 
-        // ======================
-        // ⬇️ REPLY ANGKA → DOWNLOAD
-        // ======================
-        if (isNumber && isReply) {
+            // user belum search
             const cache = getCache(chatId)
-
-            // cache expired
-            if (cache === 'expired') {
+            if (!cache) {
                 await sock.sendMessage(
                     chatId,
-                    { text: '⏳ List sudah kadaluarsa, silakan search ulang.' },
+                    { text: 'Belum ada list.\nSilakan cari dulu dengan:\n*.xvsearch <kata kunci>*' },
                     { quoted: message }
                 )
                 return
             }
 
-            // cache kosong / tidak ada
-            if (!Array.isArray(cache)) {
+            // cache expired
+            if (cache === 'expired') {
+                await sock.sendMessage(
+                    chatId,
+                    { text: '⏳ List sudah kadaluarsa.\nSilakan cari ulang dengan *.xvsearch*' },
+                    { quoted: message }
+                )
                 return
             }
 
-            const idx = Number(text) - 1
+            if (!num || !/^[0-9]+$/.test(num)) {
+                await sock.sendMessage(
+                    chatId,
+                    { text: 'Masukkan nomor.\nContoh: *.getxvideo 1*' },
+                    { quoted: message }
+                )
+                return
+            }
+
+            const idx = Number(num) - 1
             if (!cache[idx]) {
                 await sock.sendMessage(
                     chatId,
@@ -116,7 +104,6 @@ module.exports = async (sock, chatId, message, userMessage) => {
 
             const url = cache[idx].link
             const dl = await xvideos.download(url)
-
             if (!dl || !dl.videos) {
                 await sock.sendMessage(
                     chatId,
@@ -149,6 +136,6 @@ module.exports = async (sock, chatId, message, userMessage) => {
         }
 
     } catch (e) {
-        console.error('XVIDEOS COMMAND ERROR:', e)
+        console.error('XVIDEOS CMD ERROR:', e)
     }
 }
