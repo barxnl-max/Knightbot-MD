@@ -277,7 +277,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
               return;
           } */
         
-       if (userMessage && !message.key.fromMe) {
+       if (userMessage) {
     await autoresponCommand(
         sock,
         chatId,
