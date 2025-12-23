@@ -25,6 +25,7 @@ module.exports = async (sock, chatId, message, userMessage, channelInfo) => {
         message.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
         message.message?.imageMessage?.contextInfo?.quotedMessage ||
         message.message?.videoMessage?.contextInfo?.quotedMessage ||
+        message.message?.audioMessage?.contextInfo?.quotedMessage ||
         null
 
     // ===============================
@@ -63,7 +64,8 @@ module.exports = async (sock, chatId, message, userMessage, channelInfo) => {
             const ext =
                 mediaType === 'image' ? 'jpg' :
                 mediaType === 'video' ? 'mp4' :
-                mediaType === 'audio' ? 'mp3' : 'webp'
+                mediaType === 'audio' ? 'mp3' :
+                'webp'
 
             const filename = `${arg}.${ext}`
             fs.writeFileSync(path.join(MEDIA_DIR, filename), buffer)
@@ -161,22 +163,37 @@ module.exports = async (sock, chatId, message, userMessage, channelInfo) => {
     }
 
     // ===============================
-    // AUTO RESPON (CHAT BIASA)
+    // AUTO RESPON (TEXT + MEDIA)
     // ===============================
     if (!userMessage.startsWith('.')) {
 
-        // MEDIA PRIORITAS
+        // ===== MEDIA PRIORITAS =====
         const mediaDB = load(MEDIA_DB)
         for (const k in mediaDB) {
             if (userMessage.includes(k)) {
-                const filePath = path.join(MEDIA_DIR, mediaDB[k].file)
+                const data = mediaDB[k]
+                const filePath = path.join(MEDIA_DIR, data.file)
+
+                // 🔊 AUDIO FIX (VN / PTT)
+                if (data.mediaType === 'audio') {
+                    await sock.sendMessage(chatId, {
+                        audio: { url: filePath },
+                        mimetype: 'audio/mpeg',
+                        ptt: true
+                    }, { quoted: message })
+                    return
+                }
+
+                // 🖼️ IMAGE / 🎥 VIDEO / 🧷 STICKER
                 const buffer = fs.readFileSync(filePath)
-                await sock.sendMessage(chatId, { [mediaDB[k].mediaType]: buffer }, { quoted: message })
+                await sock.sendMessage(chatId, {
+                    [data.mediaType]: buffer
+                }, { quoted: message })
                 return
             }
         }
 
-        // TEXT
+        // ===== TEXT =====
         const textDB = load(TEXT_DB)
         for (const k in textDB) {
             if (userMessage.includes(k)) {
