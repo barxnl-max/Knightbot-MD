@@ -274,7 +274,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                   ...channelInfo
               });
               return;
-          } */
+          } 
         
        const handled = await autoresponCommand(
     sock,
@@ -284,7 +284,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
     channelInfo
 )
 
-if (handled) return
+if (handled) return */
         
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
@@ -704,6 +704,17 @@ case userMessage.startsWith('>'): {
                     tictactoeMove(sock, chatId, senderId, position);
                 }
                 break;
+            case userMessage.startsWith('.addautorespon'):
+case userMessage === '.listautorespon':
+case userMessage.startsWith('.delautorespon'):
+    await autoresponCommand(
+        sock,
+        chatId,
+        message,
+        userMessage.toLowerCase(),
+        channelInfo
+    )
+    break
             case userMessage === '.topmembers':
                 topMembers(sock, chatId, isGroup);
                 break;
