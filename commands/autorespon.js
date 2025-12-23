@@ -1,40 +1,62 @@
 const fs = require('fs')
 const path = require('path')
+const { downloadContentFromMessage } = require('@whiskeysockets/baileys')
 
-const textFile = './database/autorespon_text.json'
-const mediaFile = './database/autorespon_media.json'
-const mediaDir = './database/autorespon_media'
+const DB_DIR = './database'
+const TEXT_DB = './database/autorespon_text.json'
+const MEDIA_DB = './database/autorespon_media.json'
+const MEDIA_DIR = './database/autorespon_media'
 
-if (!fs.existsSync('./database')) fs.mkdirSync('./database')
-if (!fs.existsSync(mediaDir)) fs.mkdirSync(mediaDir)
-if (!fs.existsSync(textFile)) fs.writeFileSync(textFile, '{}')
-if (!fs.existsSync(mediaFile)) fs.writeFileSync(mediaFile, '{}')
+if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR)
+if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR)
+if (!fs.existsSync(TEXT_DB)) fs.writeFileSync(TEXT_DB, '{}')
+if (!fs.existsSync(MEDIA_DB)) fs.writeFileSync(MEDIA_DB, '{}')
 
-const load = (f) => JSON.parse(fs.readFileSync(f))
-const save = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2))
+const load = (file) => JSON.parse(fs.readFileSync(file))
+const save = (file, data) =>
+    fs.writeFileSync(file, JSON.stringify(data, null, 2))
 
 module.exports = async (sock, chatId, message, userMessage, channelInfo) => {
 
-    // ================= ADD AUTORESPON =================
+    // ===============================
+    // AMBIL QUOTED MESSAGE (AMAN)
+    // ===============================
+    const quoted =
+        message.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
+        message.message?.imageMessage?.contextInfo?.quotedMessage ||
+        message.message?.videoMessage?.contextInfo?.quotedMessage ||
+        null
+
+    // ===============================
+    // ADD AUTORESPON
+    // ===============================
     if (userMessage.startsWith('.addautorespon')) {
-        const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage
         const arg = userMessage.replace('.addautorespon', '').trim().toLowerCase()
 
-        // ===== MEDIA =====
+        // ===== ADD MEDIA =====
         if (quoted && arg && !arg.includes('|')) {
-            const mediaType =
-                quoted.imageMessage ? 'image' :
-                quoted.videoMessage ? 'video' :
-                quoted.audioMessage ? 'audio' :
-                quoted.stickerMessage ? 'sticker' : null
+            let mediaType, mediaMsg
 
-            if (!mediaType) return true
+            if (quoted.imageMessage) {
+                mediaType = 'image'
+                mediaMsg = quoted.imageMessage
+            } else if (quoted.videoMessage) {
+                mediaType = 'video'
+                mediaMsg = quoted.videoMessage
+            } else if (quoted.audioMessage) {
+                mediaType = 'audio'
+                mediaMsg = quoted.audioMessage
+            } else if (quoted.stickerMessage) {
+                mediaType = 'sticker'
+                mediaMsg = quoted.stickerMessage
+            }
 
-            const stream = await sock.downloadContentFromMessage(
-                quoted[`${mediaType}Message`],
-                mediaType
-            )
+            if (!mediaType) {
+                await sock.sendMessage(chatId, { text: '❌ reply media dulu', ...channelInfo }, { quoted: message })
+                return
+            }
 
+            const stream = await downloadContentFromMessage(mediaMsg, mediaType)
             let buffer = Buffer.from([])
             for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
 
@@ -43,133 +65,126 @@ module.exports = async (sock, chatId, message, userMessage, channelInfo) => {
                 mediaType === 'video' ? 'mp4' :
                 mediaType === 'audio' ? 'mp3' : 'webp'
 
-            const fileName = `${arg}.${ext}`
-            fs.writeFileSync(path.join(mediaDir, fileName), buffer)
+            const filename = `${arg}.${ext}`
+            fs.writeFileSync(path.join(MEDIA_DIR, filename), buffer)
 
-            const mediaData = load(mediaFile)
-            mediaData[arg] = { mediaType, file: fileName }
-            save(mediaFile, mediaData)
+            const mediaDB = load(MEDIA_DB)
+            mediaDB[arg] = { mediaType, file: filename }
+            save(MEDIA_DB, mediaDB)
 
             await sock.sendMessage(chatId, {
                 text: `✅ autorespon media "${arg}" ditambahkan`,
                 ...channelInfo
             }, { quoted: message })
-            return true
+            return
         }
 
-        // ===== TEXT (pakai *) =====
+        // ===== ADD TEXT =====
         if (arg.includes('|')) {
             const [key, raw] = arg.split('|')
-
             const responses = raw
                 .split('*')
                 .map(v => v.trim())
                 .filter(Boolean)
 
-            if (!responses.length) return true
+            if (!responses.length) {
+                await sock.sendMessage(chatId, { text: '❌ respon kosong', ...channelInfo }, { quoted: message })
+                return
+            }
 
-            const textData = load(textFile)
-            textData[key] = responses
-            save(textFile, textData)
+            const textDB = load(TEXT_DB)
+            textDB[key] = responses
+            save(TEXT_DB, textDB)
 
             await sock.sendMessage(chatId, {
                 text: `✅ autorespon teks "${key}" ditambahkan (${responses.length})`,
                 ...channelInfo
             }, { quoted: message })
-            return true
+            return
         }
 
         await sock.sendMessage(chatId, { text: '❌ format salah', ...channelInfo }, { quoted: message })
-        return true
+        return
     }
 
-    // ================= LIST AUTORESPON =================
+    // ===============================
+    // LIST AUTORESPON
+    // ===============================
     if (userMessage === '.listautorespon') {
-        const textData = load(textFile)
-        const mediaData = load(mediaFile)
+        const textDB = load(TEXT_DB)
+        const mediaDB = load(MEDIA_DB)
 
         let txt = '📋 *LIST AUTORESPON*\n\n'
 
-        const textKeys = Object.keys(textData)
-        const mediaKeys = Object.keys(mediaData)
+        txt += `📝 TEXT (${Object.keys(textDB).length})\n`
+        txt += Object.keys(textDB).length
+            ? Object.keys(textDB).map(v => `- ${v}`).join('\n')
+            : '- kosong'
 
-        txt += `📝 Text (${textKeys.length}):\n`
-        txt += textKeys.length ? textKeys.map(v => `- ${v}`).join('\n') : '- kosong'
-
-        txt += `\n\n🖼️ Media (${mediaKeys.length}):\n`
-        txt += mediaKeys.length ? mediaKeys.map(v => `- ${v}`).join('\n') : '- kosong'
+        txt += `\n\n🖼️ MEDIA (${Object.keys(mediaDB).length})\n`
+        txt += Object.keys(mediaDB).length
+            ? Object.keys(mediaDB).map(v => `- ${v}`).join('\n')
+            : '- kosong'
 
         await sock.sendMessage(chatId, { text: txt, ...channelInfo }, { quoted: message })
-        return true
+        return
     }
 
-    // ================= DELETE AUTORESPON =================
+    // ===============================
+    // DELETE AUTORESPON
+    // ===============================
     if (userMessage.startsWith('.delautorespon')) {
         const key = userMessage.replace('.delautorespon', '').trim().toLowerCase()
-        if (!key) return true
+        if (!key) return
 
-        const textData = load(textFile)
-        const mediaData = load(mediaFile)
+        const textDB = load(TEXT_DB)
+        const mediaDB = load(MEDIA_DB)
 
-        // TEXT
-        if (textData[key]) {
-            delete textData[key]
-            save(textFile, textData)
-
-            await sock.sendMessage(chatId, {
-                text: `✅ autorespon teks "${key}" dihapus`,
-                ...channelInfo
-            }, { quoted: message })
-            return true
+        if (textDB[key]) {
+            delete textDB[key]
+            save(TEXT_DB, textDB)
+            await sock.sendMessage(chatId, { text: `✅ autorespon teks "${key}" dihapus`, ...channelInfo }, { quoted: message })
+            return
         }
 
-        // MEDIA
-        if (mediaData[key]) {
-            const filePath = path.join(mediaDir, mediaData[key].file)
+        if (mediaDB[key]) {
+            const filePath = path.join(MEDIA_DIR, mediaDB[key].file)
             if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
-
-            delete mediaData[key]
-            save(mediaFile, mediaData)
-
-            await sock.sendMessage(chatId, {
-                text: `✅ autorespon media "${key}" dihapus`,
-                ...channelInfo
-            }, { quoted: message })
-            return true
+            delete mediaDB[key]
+            save(MEDIA_DB, mediaDB)
+            await sock.sendMessage(chatId, { text: `✅ autorespon media "${key}" dihapus`, ...channelInfo }, { quoted: message })
+            return
         }
 
-        await sock.sendMessage(chatId, {
-            text: `❌ autorespon "${key}" tidak ditemukan`,
-            ...channelInfo
-        }, { quoted: message })
-        return true
+        await sock.sendMessage(chatId, { text: `❌ autorespon "${key}" tidak ditemukan`, ...channelInfo }, { quoted: message })
+        return
     }
 
-    // ================= AUTO RESPON =================
+    // ===============================
+    // AUTO RESPON (CHAT BIASA)
+    // ===============================
     if (!userMessage.startsWith('.')) {
 
         // MEDIA PRIORITAS
-        const mediaData = load(mediaFile)
-        for (const key in mediaData) {
-            if (userMessage.includes(key)) {
-                const filePath = path.join(mediaDir, mediaData[key].file)
+        const mediaDB = load(MEDIA_DB)
+        for (const k in mediaDB) {
+            if (userMessage.includes(k)) {
+                const filePath = path.join(MEDIA_DIR, mediaDB[k].file)
                 const buffer = fs.readFileSync(filePath)
-                await sock.sendMessage(chatId, { [mediaData[key].mediaType]: buffer }, { quoted: message })
-                return true
+                await sock.sendMessage(chatId, { [mediaDB[k].mediaType]: buffer }, { quoted: message })
+                return
             }
         }
 
         // TEXT
-        const textData = load(textFile)
-        for (const key in textData) {
-            if (userMessage.includes(key)) {
-                const list = textData[key]
+        const textDB = load(TEXT_DB)
+        for (const k in textDB) {
+            if (userMessage.includes(k)) {
+                const list = textDB[k]
                 const reply = list[Math.floor(Math.random() * list.length)]
                 await sock.sendMessage(chatId, { text: reply, ...channelInfo }, { quoted: message })
-                return true
+                return
             }
         }
     }
-
-    return false
 }
