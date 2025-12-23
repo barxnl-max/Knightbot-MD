@@ -407,12 +407,16 @@ async function handleMessages(sock, messageUpdate, printLog) {
         break
 
     case userMessage.startsWith('.addautorespon'):
-        await autoresponCommand(sock, chatId, message, userMessage, channelInfo, isPublic)
-        break
-
-    case userMessage === '.listautorespon':
-        await autoresponCommand(sock, chatId, message, userMessage, channelInfo, isPublic)
-        break
+case userMessage.startsWith('.delautorespon'):
+case userMessage === '.listautorespon':
+    await autoresponCommand(
+        sock,
+        chatId,
+        message,
+        userMessage.toLowerCase(),
+        channelInfo,
+    )
+    break
             case userMessage.startsWith('.mute'):
                 {
                     const parts = userMessage.trim().split(/\s+/);
