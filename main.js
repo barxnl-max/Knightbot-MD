@@ -41,6 +41,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
+const snapsaveCommand = require('./commands/snapsave')
 const autoresponCommand = require('./commands/autorespon')
 const tagBotCommand = require('./commands/antitagg')
 const evalCommand = require('./commands/eval')
@@ -274,7 +275,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                   ...channelInfo
               });
               return;
-          } */
+          } *
         
        if (userMessage) {
     await autoresponCommand(
@@ -284,7 +285,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
         userMessage.toLowerCase(),
         channelInfo
     )
-}
+} */
         
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
@@ -401,6 +402,17 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 const mentionedJidListKick = message.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
                 await kickCommand(sock, chatId, senderId, mentionedJidListKick, message);
                 break;
+            case userMessage.startsWith('.snapsave'):
+        await snapsaveCommand(sock, chatId, message, userMessage, channelInfo)
+        break
+
+    case userMessage.startsWith('.addautorespon'):
+        await autoresponCommand(sock, chatId, message, userMessage, channelInfo, isPublic)
+        break
+
+    case userMessage === '.listautorespon':
+        await autoresponCommand(sock, chatId, message, userMessage, channelInfo, isPublic)
+        break
             case userMessage.startsWith('.mute'):
                 {
                     const parts = userMessage.trim().split(/\s+/);
