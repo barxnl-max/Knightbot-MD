@@ -41,6 +41,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
+const xvideosCommand = require('./commands/xvideos')
 const snapsaveCommand = require('./commands/snapsave')
 const autoresponCommand = require('./commands/autorespon')
 const tagBotCommand = require('./commands/antitagg')
