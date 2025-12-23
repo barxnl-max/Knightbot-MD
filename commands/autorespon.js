@@ -208,6 +208,6 @@ module.exports = async function autoresponCommand(
 
     } catch (e) {
         console.error('AUTORESPON ERROR:', e)
-        await sock.sendMessage(chatId, { text: '❌ An error occurred while processing your message.' })
+        // await sock.sendMessage(chatId, { text: '❌ An error occurred while processing your message.' })
     }
 }
