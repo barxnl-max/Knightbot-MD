@@ -18,7 +18,7 @@ const save = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2))
 const rand = a => a[Math.floor(Math.random() * a.length)]
 
 async function downloadQuotedMedia(quoted) {
-    let mediaType, mediaMsg
+    let mediaType, mediaMsg, isPTT = false
 
     if (quoted.imageMessage) {
         mediaType = 'image'
@@ -29,6 +29,7 @@ async function downloadQuotedMedia(quoted) {
     } else if (quoted.audioMessage) {
         mediaType = 'audio'
         mediaMsg = quoted.audioMessage
+        isPTT = quoted.audioMessage.ptt === true
     } else if (quoted.stickerMessage) {
         mediaType = 'sticker'
         mediaMsg = quoted.stickerMessage
@@ -42,7 +43,7 @@ async function downloadQuotedMedia(quoted) {
         buffer = Buffer.concat([buffer, chunk])
     }
 
-    return { mediaType, buffer }
+    return { mediaType, buffer, isPTT }
 }
 
 module.exports = async function autoresponCommand(
@@ -68,8 +69,7 @@ module.exports = async function autoresponCommand(
             const [keyRaw, respRaw] = args.split('|')
             const key = keyRaw.trim()
 
-            const quoted =
-                message.message?.extendedTextMessage?.contextInfo?.quotedMessage
+            const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage
 
             // ===== MEDIA =====
             if (quoted) {
@@ -82,15 +82,17 @@ module.exports = async function autoresponCommand(
                 const ext =
                     media.mediaType === 'image' ? 'jpg' :
                     media.mediaType === 'video' ? 'mp4' :
-                    media.mediaType === 'audio' ? 'ogg' :
-                    'webp'
+                    media.mediaType === 'audio'
+                        ? (media.isPTT ? 'ogg' : 'mp3')
+                        : 'webp'
 
                 const filename = crypto.randomBytes(8).toString('hex') + '.' + ext
                 fs.writeFileSync(path.join(MEDIA_DIR, filename), media.buffer)
 
                 mediaDB[key] = {
                     mediaType: media.mediaType,
-                    file: filename
+                    file: filename,
+                    isPTT: media.isPTT
                 }
                 save(MEDIA_DB, mediaDB)
 
@@ -167,17 +169,29 @@ module.exports = async function autoresponCommand(
         if (mediaDB[text]) {
             const data = mediaDB[text]
             const filePath = path.join(MEDIA_DIR, data.file)
+            const buffer = fs.readFileSync(filePath)
 
             if (data.mediaType === 'audio') {
+                // ===== VOICE NOTE =====
+                if (data.isPTT) {
+                    await sock.sendMessage(chatId, {
+                        audio: buffer,
+                        mimetype: 'audio/ogg; codecs=opus',
+                        ptt: true
+                    }, { quoted: message })
+                    return
+                }
+
+                // ===== AUDIO MUSIK =====
                 await sock.sendMessage(chatId, {
-                    audio: fs.readFileSync(filePath),
-                    mimetype: 'audio/mpeg;'
+                    audio: buffer,
+                    mimetype: 'audio/mpeg'
                 }, { quoted: message })
                 return
             }
 
             await sock.sendMessage(chatId, {
-                [data.mediaType]: fs.readFileSync(filePath)
+                [data.mediaType]: buffer
             }, { quoted: message })
             return
         }
