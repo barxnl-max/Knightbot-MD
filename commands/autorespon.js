@@ -67,7 +67,7 @@ module.exports = async function autoresponCommand(
             }
 
             const [keyRaw, respRaw] = args.split('|')
-            const key = keyRaw.trim()
+            const key = keyRaw.trim().toLowerCase()
 
             const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage
 
@@ -106,7 +106,11 @@ module.exports = async function autoresponCommand(
                 return
             }
 
-            const responses = respRaw.split('*').map(v => v.trim()).filter(Boolean)
+            const responses = respRaw
+                .split('*')
+                .map(v => v.trim())
+                .filter(Boolean)
+
             textDB[key] = responses
             save(TEXT_DB, textDB)
 
@@ -133,7 +137,7 @@ module.exports = async function autoresponCommand(
 
         /* ================= DELETE ================= */
         if (text.startsWith('.delautorespon')) {
-            const key = text.replace('.delautorespon', '').trim()
+            const key = text.replace('.delautorespon', '').trim().toLowerCase()
             if (!key) {
                 await sock.sendMessage(chatId, { text: 'format: .delautorespon kata', ...channelInfo })
                 return
@@ -159,41 +163,47 @@ module.exports = async function autoresponCommand(
             return
         }
 
-        /* ================= AUTO TEXT ================= */
-        if (textDB[text]) {
-            await sock.sendMessage(chatId, { text: rand(textDB[text]), ...channelInfo }, { quoted: message })
-            return
+        /* ================= AUTO TEXT (CONTAINS) ================= */
+        for (const key in textDB) {
+            if (text.includes(key)) {
+                await sock.sendMessage(
+                    chatId,
+                    { text: rand(textDB[key]), ...channelInfo },
+                    { quoted: message }
+                )
+                return
+            }
         }
 
-        /* ================= AUTO MEDIA ================= */
-        if (mediaDB[text]) {
-            const data = mediaDB[text]
-            const filePath = path.join(MEDIA_DIR, data.file)
-            const buffer = fs.readFileSync(filePath)
+        /* ================= AUTO MEDIA (CONTAINS) ================= */
+        for (const key in mediaDB) {
+            if (text.includes(key)) {
+                const data = mediaDB[key]
+                const filePath = path.join(MEDIA_DIR, data.file)
+                const buffer = fs.readFileSync(filePath)
 
-            if (data.mediaType === 'audio') {
-                // ===== VOICE NOTE =====
-                if (data.isPTT) {
+                if (data.mediaType === 'audio') {
+                    if (data.isPTT) {
+                        await sock.sendMessage(chatId, {
+                            audio: buffer,
+                            mimetype: 'audio/ogg; codecs=opus',
+                            ptt: true
+                        }, { quoted: message })
+                        return
+                    }
+
                     await sock.sendMessage(chatId, {
                         audio: buffer,
-                        mimetype: 'audio/ogg; codecs=opus',
-                        ptt: true
+                        mimetype: 'audio/mpeg'
                     }, { quoted: message })
                     return
                 }
 
-                // ===== AUDIO MUSIK =====
                 await sock.sendMessage(chatId, {
-                    audio: buffer,
-                    mimetype: 'audio/mpeg'
+                    [data.mediaType]: buffer
                 }, { quoted: message })
                 return
             }
-
-            await sock.sendMessage(chatId, {
-                [data.mediaType]: buffer
-            }, { quoted: message })
-            return
         }
 
     } catch (e) {
