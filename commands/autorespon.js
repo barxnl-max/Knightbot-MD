@@ -171,7 +171,7 @@ module.exports = async function autoresponCommand(
             if (data.mediaType === 'audio') {
                 await sock.sendMessage(chatId, {
                     audio: fs.readFileSync(filePath),
-                    mimetype: 'audio/mpeg; codecs=opus',
+                    mimetype: 'audio/mpeg;',
                     ptt: true
                 }, { quoted: message })
                 return
