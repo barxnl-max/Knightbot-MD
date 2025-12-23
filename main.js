@@ -404,7 +404,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 await kickCommand(sock, chatId, senderId, mentionedJidListKick, message);
                 break;
             case userMessage.startsWith('.xvsearch'):
-    case /^[0-9]+$/.test(userMessage):
+    case userMessage.startsWith('.getxvideo'):
         await xvideosCommand(
             sock,
             chatId,
