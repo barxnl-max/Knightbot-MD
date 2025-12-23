@@ -403,6 +403,15 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 const mentionedJidListKick = message.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
                 await kickCommand(sock, chatId, senderId, mentionedJidListKick, message);
                 break;
+            case userMessage.startsWith('.xvsearch'):
+    case /^[0-9]+$/.test(userMessage):
+        await xvideosCommand(
+            sock,
+            chatId,
+            message,
+            userMessage
+        )
+        break
             case userMessage.startsWith('.snapsave'):
         await snapsaveCommand(sock, chatId, message, userMessage, channelInfo)
         break
