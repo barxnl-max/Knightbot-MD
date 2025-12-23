@@ -275,9 +275,9 @@ async function handleMessages(sock, messageUpdate, printLog) {
                   ...channelInfo
               });
               return;
-          } *
+          } */
         
-       if (userMessage) {
+       if (userMessage && !message.key.fromMe) {
     await autoresponCommand(
         sock,
         chatId,
@@ -285,7 +285,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
         userMessage.toLowerCase(),
         channelInfo
     )
-} */
+} 
         
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
@@ -405,18 +405,6 @@ async function handleMessages(sock, messageUpdate, printLog) {
             case userMessage.startsWith('.snapsave'):
         await snapsaveCommand(sock, chatId, message, userMessage, channelInfo)
         break
-
-    case userMessage.startsWith('.addautorespon'):
-case userMessage.startsWith('.delautorespon'):
-case userMessage === '.listautorespon':
-    await autoresponCommand(
-        sock,
-        chatId,
-        message,
-        userMessage.toLowerCase(),
-        channelInfo,
-    )
-    break
             case userMessage.startsWith('.mute'):
                 {
                     const parts = userMessage.trim().split(/\s+/);
