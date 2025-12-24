@@ -2,6 +2,10 @@ const { spawn } = require('child_process')
 const fs = require('fs')
 const { writeExifVid } = require('../lib/exif')
 
+/* =========================
+   MAIN COMMAND
+========================= */
+
 async function attpCommand(sock, chatId, message) {
     const body =
         message.message?.conversation ||
@@ -10,36 +14,57 @@ async function attpCommand(sock, chatId, message) {
 
     const text = body.split(' ').slice(1).join(' ').trim()
     if (!text) {
-        return sock.sendMessage(
+        await sock.sendMessage(
             chatId,
-            { text: '❌ contoh: .attp halo aku sayang kamu' },
+            { text: '❌ Contoh: .attp halo aku sayang kamu' },
             { quoted: message }
         )
+        return
     }
 
     try {
-        const mp4 = await renderBlinkingAttp(text)
-        const webpPath = await writeExifVid(mp4, { packname: 'Knight Bot' })
-        const webp = fs.readFileSync(webpPath)
+        const mp4Buffer = await renderBlinkingVideo(text)
+        const webpPath = await writeExifVid(mp4Buffer, {
+            packname: 'Catashtroph',
+            author: 'peler'
+        })
+
+        const sticker = fs.readFileSync(webpPath)
         fs.unlinkSync(webpPath)
 
-        await sock.sendMessage(chatId, { sticker: webp }, { quoted: message })
+        await sock.sendMessage(chatId, { sticker }, { quoted: message })
     } catch (e) {
-        console.error(e)
-        await sock.sendMessage(chatId, { text: '❌ gagal bikin sticker' })
+        console.error('ATTP ERROR:', e)
+        // sengaja TIDAK kirim pesan error biar gak spam
     }
 }
 
 module.exports = attpCommand
 
-/* ================= UTIL ================= */
+/* =========================
+   TEXT UTILS
+========================= */
 
+// auto font mengecil
+function calcFontSize(text) {
+    const maxSize = 72
+    const minSize = 28
+    const limit = 18
+
+    if (text.length <= limit) return maxSize
+    return Math.max(
+        Math.floor(maxSize * (limit / text.length)),
+        minSize
+    )
+}
+
+// auto enter / wrap
 function wrapText(text, maxLine = 12) {
     const words = text.split(' ')
     let lines = []
     let line = ''
 
-    for (let w of words) {
+    for (const w of words) {
         if ((line + w).length > maxLine) {
             lines.push(line.trim())
             line = w + ' '
@@ -51,17 +76,9 @@ function wrapText(text, maxLine = 12) {
     return lines.join('\n')
 }
 
-function calcFontSize(text) {
-    const max = 72
-    const min = 28
-    const limit = 18
-
-    if (text.length <= limit) return max
-    return Math.max(Math.floor(max * (limit / text.length)), min)
-}
-
-function escapeText(s) {
-    return s
+// escape aman buat drawtext
+function escapeText(text) {
+    return text
         .replace(/\\/g, '\\\\')
         .replace(/:/g, '\\:')
         .replace(/,/g, '\\,')
@@ -69,17 +86,26 @@ function escapeText(s) {
         .replace(/\n/g, '\\n')
 }
 
-/* ================= FFMPEG ================= */
+/* =========================
+   FFMPEG RENDER
+========================= */
 
-function renderBlinkingAttp(text) {
+function renderBlinkingVideo(text) {
     return new Promise((resolve, reject) => {
-        const font = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
         const wrapped = wrapText(text)
-        const size = calcFontSize(text)
-        const safe = escapeText(wrapped)
+        const fontSize = calcFontSize(text)
+        const safeText = escapeText(wrapped)
+
+        const cycle = 0.3
+        const duration = 1.8
 
         const draw = (color, start, end) =>
-            `drawtext=fontfile=${font}:text='${safe}':fontsize=${size}:fontcolor=${color}:borderw=2:bordercolor=black:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(mod(t\\,0.3)\\,${start}\\,${end})'`
+            `drawtext=text='${safeText}':` +
+            `fontsize=${fontSize}:` +
+            `fontcolor=${color}:` +
+            `borderw=2:bordercolor=black@0.6:` +
+            `x=(w-text_w)/2:y=(h-text_h)/2:` +
+            `enable='between(mod(t\\,${cycle})\\,${start}\\,${end})'`
 
         const filter =
             draw('red', 0, 0.1) + ',' +
@@ -89,24 +115,27 @@ function renderBlinkingAttp(text) {
         const args = [
             '-y',
             '-f', 'lavfi',
-            '-i', 'color=black:s=512x512:d=1.8:r=20',
+            '-i', `color=c=black:s=512x512:d=${duration}:r=20`,
             '-vf', filter,
-            '-c:v', 'libx264',
             '-pix_fmt', 'yuv420p',
-            '-movflags', '+faststart',
+            '-t', duration.toString(),
             '-f', 'mp4',
             'pipe:1'
         ]
 
         const ff = spawn('ffmpeg', args)
-        const buf = []
-        const err = []
+        const chunks = []
+        const errors = []
 
-        ff.stdout.on('data', d => buf.push(d))
-        ff.stderr.on('data', e => err.push(e))
-        ff.on('close', c => {
-            if (c === 0) resolve(Buffer.concat(buf))
-            else reject(Buffer.concat(err).toString())
+        ff.stdout.on('data', d => chunks.push(d))
+        ff.stderr.on('data', e => errors.push(e))
+
+        ff.on('close', code => {
+            if (code === 0) {
+                resolve(Buffer.concat(chunks))
+            } else {
+                reject(Buffer.concat(errors).toString())
+            }
         })
     })
 }
