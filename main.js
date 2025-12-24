@@ -41,6 +41,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
+const bratCommand = require('./commands/brat');
 const xvideosCommand = require('./commands/xvideos')
 const snapsaveCommand = require('./commands/snapsave')
 const autoresponCommand = require('./commands/autorespon')
@@ -403,6 +404,11 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 const mentionedJidListKick = message.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
                 await kickCommand(sock, chatId, senderId, mentionedJidListKick, message);
                 break;
+            case 'brat': {
+    const text = args.join(' ');
+    await bratCommand(sock, chatId, message, text);
+}
+break;
             case userMessage.startsWith('.xvsearch'):
     case userMessage.startsWith('.getxvideo'):
         await xvideosCommand(
