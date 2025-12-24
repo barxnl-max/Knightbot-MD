@@ -404,11 +404,11 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 const mentionedJidListKick = message.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
                 await kickCommand(sock, chatId, senderId, mentionedJidListKick, message);
                 break;
-            case 'brat': {
-    const text = args.join(' ');
-    await bratCommand(sock, chatId, message, text);
+            case body.startsWith('.brat'): {
+    const text = body.slice(5).trim()
+    await bratCommand(sock, chatId, message, text)
 }
-break;
+break
             case userMessage.startsWith('.xvsearch'):
     case userMessage.startsWith('.getxvideo'):
         await xvideosCommand(
