@@ -136,7 +136,7 @@ const botJids = botNumb + '@s.whatsapp.net';
 		console.error('handleMentionDetection error:', err);
 	}
 }
-
+}
 async function mentionToggleCommand(sock, chatId, message, args, isOwner) {
 	if (!isOwner) return sock.sendMessage(chatId, { text: 'Only Owner or Sudo can use this command.' }, { quoted: message });
 	const onoff = (args || '').trim().toLowerCase();
