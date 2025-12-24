@@ -94,6 +94,7 @@ const botJids = botNumb + '@s.whatsapp.net';
 				msg.videoMessage?.caption ||
 				''
 			).toString();
+		}
 		const isBotMentioned = mentioned.some(j => botJids.includes(j));
 		if (!isBotMentioned) {
 			// If no formal mention but heuristic matched, proceed silently
@@ -136,7 +137,7 @@ const botJids = botNumb + '@s.whatsapp.net';
 		console.error('handleMentionDetection error:', err);
 	}
 }
-}
+
 async function mentionToggleCommand(sock, chatId, message, args, isOwner) {
 	if (!isOwner) return sock.sendMessage(chatId, { text: 'Only Owner or Sudo can use this command.' }, { quoted: message });
 	const onoff = (args || '').trim().toLowerCase();
