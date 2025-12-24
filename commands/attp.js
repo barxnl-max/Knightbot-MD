@@ -1,108 +1,148 @@
-const { spawn } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const { writeExifImg, writeExifVid } = require('../lib/exif');
+const { spawn } = require('child_process')
+const fs = require('fs')
+const { writeExifVid } = require('../lib/exif')
+
+/* =========================
+   HELPER FUNCTIONS
+========================= */
+
+function calcFontSize(text) {
+    const maxSize = 72
+    const minSize = 28
+    const maxChars = 18
+
+    const len = text.length
+    if (len <= maxChars) return maxSize
+
+    const size = Math.floor(maxSize * (maxChars / len))
+    return Math.max(size, minSize)
+}
+
+function wrapText(text, maxLine = 12) {
+    const words = text.split(' ')
+    let lines = []
+    let line = ''
+
+    for (const word of words) {
+        if ((line + word).length > maxLine) {
+            lines.push(line.trim())
+            line = word + ' '
+        } else {
+            line += word + ' '
+        }
+    }
+    if (line) lines.push(line.trim())
+    return lines.join('\n')
+}
+
+function escapeDrawtextText(text) {
+    return text
+        .replace(/\\/g, '\\\\')
+        .replace(/:/g, '\\:')
+        .replace(/,/g, '\\,')
+        .replace(/'/g, "\\'")
+        .replace(/\[/g, '\\[')
+        .replace(/\]/g, '\\]')
+        .replace(/%/g, '\\%')
+}
+
+/* =========================
+   MAIN COMMAND
+========================= */
 
 async function attpCommand(sock, chatId, message) {
-    const userMessage = message.message.conversation || message.message.extendedTextMessage?.text || '';
-    const text = userMessage.split(' ').slice(1).join(' ');
+    const body =
+        message.message?.conversation ||
+        message.message?.extendedTextMessage?.text ||
+        ''
 
+    const text = body.split(' ').slice(1).join(' ')
     if (!text) {
-        await sock.sendMessage(chatId, { text: 'Please provide text after the .attp command.' }, { quoted: message });
-        return;
+        return sock.sendMessage(
+            chatId,
+            { text: '❌ Contoh: .attp halo aku sayang kamu' },
+            { quoted: message }
+        )
     }
 
     try {
-        const mp4Buffer = await renderBlinkingVideoWithFfmpeg(text);
-        const webpPath = await writeExifVid(mp4Buffer, { packname: 'Knight Bot' });
-        const webpBuffer = fs.readFileSync(webpPath);
-        try { fs.unlinkSync(webpPath) } catch (_) {}
-        await sock.sendMessage(chatId, { sticker: webpBuffer }, { quoted: message });
-    } catch (error) {
-        console.error('Error generating local sticker:', error);
-        await sock.sendMessage(chatId, { text: 'Failed to generate the sticker locally.' }, { quoted: message });
+        const mp4 = await renderBlinkingVideo(text)
+        const webpPath = await writeExifVid(mp4, {
+            packname: 'Knight Bot',
+            author: 'ATTp'
+        })
+
+        const sticker = fs.readFileSync(webpPath)
+        fs.unlinkSync(webpPath)
+
+        await sock.sendMessage(chatId, { sticker }, { quoted: message })
+    } catch (e) {
+        console.error('ATTP ERROR:', e)
+        await sock.sendMessage(
+            chatId,
+            { text: '❌ Gagal membuat sticker ATTp' },
+            { quoted: message }
+        )
     }
 }
 
-module.exports = attpCommand;
+module.exports = attpCommand
 
-function renderTextToPngWithFfmpeg(text) {
+/* =========================
+   FFMPEG RENDER
+========================= */
+
+function renderBlinkingVideo(text) {
     return new Promise((resolve, reject) => {
-        const fontPath = process.platform === 'win32'
-            ? 'C:/Windows/Fonts/arialbd.ttf'
-            : '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+        const fontPath =
+            process.platform === 'win32'
+                ? 'C:/Windows/Fonts/arialbd.ttf'
+                : '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
 
-        // Robust escaping for ffmpeg drawtext
-        const escapeDrawtextText = (s) => s
-            .replace(/\\/g, '\\\\')
-            .replace(/:/g, '\\:')
-            .replace(/'/g, "\\'")
-            .replace(/\[/g, '\\[')
-            .replace(/\]/g, '\\]')
-            .replace(/%/g, '\\%');
+        const wrapped = wrapText(text)
+        const fontSize = calcFontSize(text)
+        const safeText = escapeDrawtextText(wrapped)
 
-        const safeText = escapeDrawtextText(text);
-        const safeFontPath = process.platform === 'win32'
-            ? fontPath.replace(/\\/g, '/').replace(':', '\\:')
-            : fontPath;
+        const cycle = 0.3
+        const duration = 1.8
 
-        const args = [
+        const draw = color => (
+            `drawtext=fontfile='${fontPath}':` +
+            `text='${safeText}':` +
+            `fontsize=${fontSize}:` +
+            `fontcolor=${color}:` +
+            `borderw=2:bordercolor=black@0.6:` +
+            `x=(w-text_w)/2:y=(h-text_h)/2`
+        )
+
+        const filter =
+            `${draw('red')}:enable='lt(mod(t\\,${cycle})\\,0.1)',` +
+            `${draw('blue')}:enable='between(mod(t\\,${cycle})\\,0.1\\,0.2)',` +
+            `${draw('green')}:enable='gte(mod(t\\,${cycle})\\,0.2)'`
+
+        const ff = spawn('ffmpeg', [
             '-y',
             '-f', 'lavfi',
-            '-i', 'color=c=#00000000:s=512x512',
-            '-vf', `drawtext=fontfile='${safeFontPath}':text='${safeText}':fontcolor=white:fontsize=56:borderw=2:bordercolor=black@0.6:x=(w-text_w)/2:y=(h-text_h)/2`,
-            '-frames:v', '1',
-            '-f', 'image2',
+            '-i', `color=c=black:s=512x512:d=${duration}:r=20`,
+            '-vf', filter,
+            '-pix_fmt', 'yuv420p',
+            '-t', duration.toString(),
+            '-f', 'mp4',
             'pipe:1'
-        ];
+        ])
 
-        const ff = spawn('ffmpeg', args);
-        const chunks = [];
-        const errors = [];
-        ff.stdout.on('data', d => chunks.push(d));
-        ff.stderr.on('data', e => errors.push(e));
-        ff.on('error', reject);
+        const chunks = []
+        const errors = []
+
+        ff.stdout.on('data', d => chunks.push(d))
+        ff.stderr.on('data', e => errors.push(e))
+
         ff.on('close', code => {
-            if (code === 0) return resolve(Buffer.concat(chunks));
-            reject(new Error(Buffer.concat(errors).toString() || `ffmpeg exited with code ${code}`));
-        });
-    });
-}
-
-function renderBlinkingVideoWithFfmpeg(text) {
-    return new Promise((resolve, reject) => {
-        const fontPath = process.platform === 'win32'
-            ? 'C:/Windows/Fonts/arialbd.ttf'
-            : '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
-
-        const escapeDrawtextText = (s) => s
-            .replace(/\\/g, '\\\\')
-            .replace(/:/g, '\\:')
-            .replace(/,/g, '\\,')
-            .replace(/'/g, "\\'")
-            .replace(/\[/g, '\\[')
-            .replace(/\]/g, '\\]')
-            .replace(/%/g, '\\%');
-
-        const safeText = escapeDrawtextText(text);
-        const safeFontPath = process.platform === 'win32'
-            ? fontPath.replace(/\\/g, '/').replace(':', '\\:')
-            : fontPath;
-
-        // Blink cycle length (seconds) and fast delay ~0.1s per color
-        const cycle = 0.3;
-        const dur = 1.8; // 6 cycles
-
-        const drawRed = `drawtext=fontfile='${safeFontPath}':text='${safeText}':fontcolor=red:borderw=2:bordercolor=black@0.6:fontsize=56:x=(w-text_w)/2:y=(h-text_h)/2:enable='lt(mod(t\,${cycle})\,0.1)'`;
-        const drawBlue = `drawtext=fontfile='${safeFontPath}':text='${safeText}':fontcolor=blue:borderw=2:bordercolor=black@0.6:fontsize=56:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(mod(t\,${cycle})\,0.1\,0.2)'`;
-        const drawGreen = `drawtext=fontfile='${safeFontPath}':text='${safeText}':fontcolor=green:borderw=2:bordercolor=black@0.6:fontsize=56:x=(w-text_w)/2:y=(h-text_h)/2:enable='gte(mod(t\,${cycle})\,0.2)'`;
-
-        const filter = `${drawRed},${drawBlue},${drawGreen}`;
-
-        const args = [
-            '-y',
-            '-f', 'lavfi',
-            '-i', `color=c=black:s=512x512:d=${dur}:r=20`,
+            if (code === 0) return resolve(Buffer.concat(chunks))
+            reject(Buffer.concat(errors).toString())
+        })
+    })
+}            '-i', `color=c=black:s=512x512:d=${dur}:r=20`,
             '-vf', filter,
             '-c:v', 'libx264',
             '-pix_fmt', 'yuv420p',
