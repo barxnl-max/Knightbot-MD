@@ -2,165 +2,111 @@ const { spawn } = require('child_process')
 const fs = require('fs')
 const { writeExifVid } = require('../lib/exif')
 
-/* =========================
-   HELPER FUNCTIONS
-========================= */
-
-function calcFontSize(text) {
-    const maxSize = 72
-    const minSize = 28
-    const maxChars = 18
-
-    const len = text.length
-    if (len <= maxChars) return maxSize
-
-    const size = Math.floor(maxSize * (maxChars / len))
-    return Math.max(size, minSize)
-}
-
-function wrapText(text, maxLine = 12) {
-    const words = text.split(' ')
-    let lines = []
-    let line = ''
-
-    for (const word of words) {
-        if ((line + word).length > maxLine) {
-            lines.push(line.trim())
-            line = word + ' '
-        } else {
-            line += word + ' '
-        }
-    }
-    if (line) lines.push(line.trim())
-    return lines.join('\n')
-}
-
-function escapeDrawtextText(text) {
-    return text
-        .replace(/\\/g, '\\\\')
-        .replace(/:/g, '\\:')
-        .replace(/,/g, '\\,')
-        .replace(/'/g, "\\'")
-        .replace(/\[/g, '\\[')
-        .replace(/\]/g, '\\]')
-        .replace(/%/g, '\\%')
-}
-
-/* =========================
-   MAIN COMMAND
-========================= */
-
 async function attpCommand(sock, chatId, message) {
     const body =
         message.message?.conversation ||
         message.message?.extendedTextMessage?.text ||
         ''
 
-    const text = body.split(' ').slice(1).join(' ')
+    const text = body.split(' ').slice(1).join(' ').trim()
     if (!text) {
         return sock.sendMessage(
             chatId,
-            { text: '❌ Contoh: .attp halo aku sayang kamu' },
+            { text: '❌ contoh: .attp halo aku sayang kamu' },
             { quoted: message }
         )
     }
 
     try {
-        const mp4 = await renderBlinkingVideo(text)
-        const webpPath = await writeExifVid(mp4, {
-            packname: 'Knight Bot',
-            author: 'ATTp'
-        })
-
-        const sticker = fs.readFileSync(webpPath)
+        const mp4 = await renderBlinkingAttp(text)
+        const webpPath = await writeExifVid(mp4, { packname: 'Knight Bot' })
+        const webp = fs.readFileSync(webpPath)
         fs.unlinkSync(webpPath)
 
-        await sock.sendMessage(chatId, { sticker }, { quoted: message })
+        await sock.sendMessage(chatId, { sticker: webp }, { quoted: message })
     } catch (e) {
-        console.error('ATTP ERROR:', e)
-        await sock.sendMessage(
-            chatId,
-            { text: '❌ Gagal membuat sticker ATTp' },
-            { quoted: message }
-        )
+        console.error(e)
+        await sock.sendMessage(chatId, { text: '❌ gagal bikin sticker' })
     }
 }
 
 module.exports = attpCommand
 
-/* =========================
-   FFMPEG RENDER
-========================= */
+/* ================= UTIL ================= */
 
-function renderBlinkingVideo(text) {
+function wrapText(text, maxLine = 12) {
+    const words = text.split(' ')
+    let lines = []
+    let line = ''
+
+    for (let w of words) {
+        if ((line + w).length > maxLine) {
+            lines.push(line.trim())
+            line = w + ' '
+        } else {
+            line += w + ' '
+        }
+    }
+    if (line) lines.push(line.trim())
+    return lines.join('\n')
+}
+
+function calcFontSize(text) {
+    const max = 72
+    const min = 28
+    const limit = 18
+
+    if (text.length <= limit) return max
+    return Math.max(Math.floor(max * (limit / text.length)), min)
+}
+
+function escapeText(s) {
+    return s
+        .replace(/\\/g, '\\\\')
+        .replace(/:/g, '\\:')
+        .replace(/,/g, '\\,')
+        .replace(/'/g, "\\'")
+        .replace(/\n/g, '\\n')
+}
+
+/* ================= FFMPEG ================= */
+
+function renderBlinkingAttp(text) {
     return new Promise((resolve, reject) => {
-        const fontPath =
-            process.platform === 'win32'
-                ? 'C:/Windows/Fonts/arialbd.ttf'
-                : '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
-
+        const font = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
         const wrapped = wrapText(text)
-        const fontSize = calcFontSize(text)
-        const safeText = escapeDrawtextText(wrapped)
+        const size = calcFontSize(text)
+        const safe = escapeText(wrapped)
 
-        const cycle = 0.3
-        const duration = 1.8
-
-        const draw = color => (
-            `drawtext=fontfile='${fontPath}':` +
-            `text='${safeText}':` +
-            `fontsize=${fontSize}:` +
-            `fontcolor=${color}:` +
-            `borderw=2:bordercolor=black@0.6:` +
-            `x=(w-text_w)/2:y=(h-text_h)/2`
-        )
+        const draw = (color, start, end) =>
+            `drawtext=fontfile=${font}:text='${safe}':fontsize=${size}:fontcolor=${color}:borderw=2:bordercolor=black:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(mod(t\\,0.3)\\,${start}\\,${end})'`
 
         const filter =
-            `${draw('red')}:enable='lt(mod(t\\,${cycle})\\,0.1)',` +
-            `${draw('blue')}:enable='between(mod(t\\,${cycle})\\,0.1\\,0.2)',` +
-            `${draw('green')}:enable='gte(mod(t\\,${cycle})\\,0.2)'`
+            draw('red', 0, 0.1) + ',' +
+            draw('blue', 0.1, 0.2) + ',' +
+            draw('green', 0.2, 0.3)
 
-        const ff = spawn('ffmpeg', [
+        const args = [
             '-y',
             '-f', 'lavfi',
-            '-i', `color=c=black:s=512x512:d=${duration}:r=20`,
-            '-vf', filter,
-            '-pix_fmt', 'yuv420p',
-            '-t', duration.toString(),
-            '-f', 'mp4',
-            'pipe:1'
-        ])
-
-        const chunks = []
-        const errors = []
-
-        ff.stdout.on('data', d => chunks.push(d))
-        ff.stderr.on('data', e => errors.push(e))
-
-        ff.on('close', code => {
-            if (code === 0) return resolve(Buffer.concat(chunks))
-            reject(Buffer.concat(errors).toString())
-        })
-    })
-}            '-i', `color=c=black:s=512x512:d=${dur}:r=20`,
+            '-i', 'color=black:s=512x512:d=1.8:r=20',
             '-vf', filter,
             '-c:v', 'libx264',
             '-pix_fmt', 'yuv420p',
-            '-movflags', '+faststart+frag_keyframe+empty_moov',
-            '-t', String(dur),
+            '-movflags', '+faststart',
             '-f', 'mp4',
             'pipe:1'
-        ];
+        ]
 
-        const ff = spawn('ffmpeg', args);
-        const chunks = [];
-        const errors = [];
-        ff.stdout.on('data', d => chunks.push(d));
-        ff.stderr.on('data', e => errors.push(e));
-        ff.on('error', reject);
-        ff.on('close', code => {
-            if (code === 0) return resolve(Buffer.concat(chunks));
-            reject(new Error(Buffer.concat(errors).toString() || `ffmpeg exited with code ${code}`));
-        });
-    });
+        const ff = spawn('ffmpeg', args)
+        const buf = []
+        const err = []
+
+        ff.stdout.on('data', d => buf.push(d))
+        ff.stderr.on('data', e => err.push(e))
+        ff.on('close', c => {
+            if (c === 0) resolve(Buffer.concat(buf))
+            else reject(Buffer.concat(err).toString())
+        })
+    })
 }
