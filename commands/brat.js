@@ -1,43 +1,54 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const { writeExifImg } = require('../lib/exif');
+const axios = require('axios')
+const fs = require('fs')
+const path = require('path')
+const { writeExifImg } = require('../lib/exif')
 
-async function bratCommand(sock, chatId, message, text) {
-    if (!text) {
-        return sock.sendMessage(
-            chatId,
-            { text: '❌ Contoh: .brat halo dunia' },
-            { quoted: message }
-        );
-    }
-
+module.exports = async function bratCommand(sock, chatId, message) {
     try {
-        // Ambil gambar dari API BRAT
-        const url = `https://aqul-brat.hf.space/?text=${encodeURIComponent(text)}`;
-        const res = await axios.get(url, { responseType: 'arraybuffer' });
-        const imgBuffer = Buffer.from(res.data);
+        // ambil text dari message (aman semua tipe)
+        const body =
+            message.message?.conversation ||
+            message.message?.extendedTextMessage?.text ||
+            ''
 
-        // Tambahin EXIF (WM)
-        const webpPath = await writeExifImg(imgBuffer, {
-            packname: 'Catastroph',
-            author: 'Catastroph'
-        });
+        const text = body.split(' ').slice(1).join(' ')
+        if (!text) {
+            await sock.sendMessage(
+                chatId,
+                { text: 'Contoh: .brat halo dunia' },
+                { quoted: message }
+            )
+            return
+        }
 
-        const stickerBuffer = fs.readFileSync(webpPath);
-        try { fs.unlinkSync(webpPath); } catch {}
+        // panggil API brat
+        const url = `https://aqul-brat.hf.space/?text=${encodeURIComponent(text)}`
+        const res = await axios.get(url, { responseType: 'arraybuffer' })
 
-        // Kirim sebagai stiker
+        // simpan sementara
+        const imgPath = path.join(__dirname, '../tmp/brat.png')
+        fs.writeFileSync(imgPath, res.data)
+
+        // kasih exif (watermark)
+        const stickerPath = await writeExifImg(
+            imgPath,
+            { packname: 'Catastroph', author: 'Brat Sticker' }
+        )
+
+        const sticker = fs.readFileSync(stickerPath)
+
         await sock.sendMessage(
             chatId,
-            { sticker: stickerBuffer },
+            { sticker },
             { quoted: message }
-        );
+        )
 
-    } catch (err) {
-        console.error('BRAT EXIF ERROR:', err);
-        // silent fail (biar ga spam error)
+        // cleanup
+        fs.unlinkSync(imgPath)
+        fs.unlinkSync(stickerPath)
+
+    } catch (e) {
+        console.error('BRAT ERROR:', e)
+        // diam aja kalau error (biar gak spam ❌)
     }
 }
-
-module.exports = bratCommand;
