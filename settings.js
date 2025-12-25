@@ -1,6 +1,6 @@
 const settings = {
-  packname: 'Lydia Bot',
-  author: '‎Akbar',
+  packname: 'Catashtroph',
+  author: '‎@barxnl250_',
   botName: "Lydia Bot",
   botOwner: 'Kontlo', // Your name
   ownerNumber: '6285654716030', //Set your number here without + symbol, just add country code & number without any space
