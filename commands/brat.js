@@ -5,10 +5,14 @@ const settings = require('../settings');
 
 async function sbratCommand(sock, chatId, message) {
     try {
-        const texttt =
-            message.message?.conversation?.replace('.sbrat', '').trim() ||
-            message.message?.extendedTextMessage?.text?.replace('.sbrat', '').trim();
+        const rawText =
+            message.message?.conversation ||
+            message.message?.extendedTextMessage?.text ||
+            '';
 
+        const texttt = rawText
+            .replace(/^(\.brat|\.sbrat)\s*/i, '')
+            .trim();
         if (!texttt) {
             return sock.sendMessage(
                 chatId,
