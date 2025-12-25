@@ -203,13 +203,13 @@ if (
                 // Only try to send error message if we have a valid chatId
                 if (mek.key && mek.key.remoteJid) {
                     await XeonBotInc.sendMessage(mek.key.remoteJid, {
-                        text: '❌ An error occurred while processing your message.',
+                        text: 'hi',
                         contextInfo: {
                             forwardingScore: 1,
-                            isForwarded: true,
+                            isForwarded: false,
                             forwardedNewsletterMessageInfo: {
-                                newsletterJid: '120363161513685998@newsletter',
-                                newsletterName: 'KnightBot MD',
+                                newsletterJid: '120363423464130445@newsletter',
+                                newsletterName: 'cata la li lo ? catashtroph!',
                                 serverMessageId: -1
                             }
                         }
@@ -317,8 +317,8 @@ if (
                         forwardingScore: 1,
                         isForwarded: true,
                         forwardedNewsletterMessageInfo: {
-                            newsletterJid: '120363161513685998@newsletter',
-                            newsletterName: 'KnightBot MD',
+                            newsletterJid: '120363423464130445@newsletter',
+                            newsletterName: 'Catashtroph',
                             serverMessageId: -1
                         }
                     }
