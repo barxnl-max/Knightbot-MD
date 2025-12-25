@@ -194,7 +194,7 @@ module.exports = async function autoresponCommand(
 
                     await sock.sendMessage(chatId, {
                         audio: buffer,
-                        mimetype: 'audio/mpeg', ptt: true
+                        mimetype: 'audio/mpeg'
                     }, { quoted: message })
                     return
                 }
