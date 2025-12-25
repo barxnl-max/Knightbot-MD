@@ -406,7 +406,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 break;
             case userMessage.startsWith('.sbrat'):
     const texttt = userMessage.slice(2).trim();
-    await sbratCommand(sock, chatId, textt, message);
+    await sbratCommand(sock, chatId, texttt, message);
 break;
             case userMessage.startsWith('.xvsearch'):
     case userMessage.startsWith('.getxvideo'):
