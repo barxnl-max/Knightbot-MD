@@ -1,10 +1,14 @@
 const fetch = require('node-fetch');
-const webp = require('node-webpmux');
-const crypto = require('crypto');
+const fs = require('fs');
+const { writeExifImg } = require('../lib/exif');
 const settings = require('../settings');
 
-async function sbratCommand(sock, chatId, texttt, message) {
+async function sbratCommand(sock, chatId, message) {
     try {
+        const texttt =
+            message.message?.conversation?.replace('.sbrat', '').trim() ||
+            message.message?.extendedTextMessage?.text?.replace('.sbrat', '').trim();
+
         if (!texttt) {
             return sock.sendMessage(
                 chatId,
@@ -19,44 +23,22 @@ async function sbratCommand(sock, chatId, texttt, message) {
 
         const imgBuffer = Buffer.from(await res.arrayBuffer());
 
-        // =========================
-        // ADD WATERMARK (EXIF)
-        // =========================
-        const img = new webp.Image();
-        await img.load(imgBuffer);
+        const stickerPath = await writeExifImg(imgBuffer, {
+            packname: settings.packname,
+            author: settings.author
+        });
 
-        const metadata = {
-            'sticker-pack-id': crypto.randomBytes(32).toString('hex'),
-            'sticker-pack-name': settings.packname || 'Catashtroph',
-            'sticker-pack-publisher': settings.author || '@barxnl250_',
-            'emojis': ['🔥']
-        };
+        const stickerBuffer = fs.readFileSync(stickerPath);
 
-        const exifAttr = Buffer.from([
-            0x49,0x49,0x2A,0x00,0x08,0x00,0x00,0x00,
-            0x01,0x00,0x41,0x57,0x07,0x00,0x00,0x00,
-            0x00,0x00,0x16,0x00,0x00,0x00
-        ]);
-
-        const jsonBuffer = Buffer.from(JSON.stringify(metadata), 'utf8');
-        const exif = Buffer.concat([exifAttr, jsonBuffer]);
-        exif.writeUIntLE(jsonBuffer.length, 14, 4);
-
-        img.exif = exif;
-
-        const finalSticker = await img.save(null);
-
-        // =========================
-        // SEND STICKER
-        // =========================
         await sock.sendMessage(
             chatId,
-            { sticker: finalSticker },
+            { sticker: stickerBuffer },
             { quoted: message }
         );
 
+        fs.unlinkSync(stickerPath);
     } catch (err) {
-        console.error('sbrat wm error:', err);
+        console.error('sbrat error:', err);
         await sock.sendMessage(
             chatId,
             { text: '❌ Gagal bikin stiker brat' },
