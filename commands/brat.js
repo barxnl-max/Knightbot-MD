@@ -1,54 +1,68 @@
-const axios = require('axios')
-const fs = require('fs')
-const path = require('path')
-const { writeExifImg } = require('../lib/exif')
+const fetch = require('node-fetch');
+const webp = require('node-webpmux');
+const crypto = require('crypto');
+const settings = require('../settings');
 
-module.exports = async function bratCommand(sock, chatId, message) {
+async function sbratCommand(sock, chatId, texttt, message) {
     try {
-        // ambil text dari message (aman semua tipe)
-        const body =
-            message.message?.conversation ||
-            message.message?.extendedTextMessage?.text ||
-            ''
-
-        const text = body.split(' ').slice(1).join(' ')
         if (!text) {
-            await sock.sendMessage(
+            return sock.sendMessage(
                 chatId,
-                { text: 'Contoh: .brat halo dunia' },
+                { text: '⚠️ Contoh: .sbrat Akbar' },
                 { quoted: message }
-            )
-            return
+            );
         }
 
-        // panggil API brat
-        const url = `https://aqul-brat.hf.space/?text=${encodeURIComponent(text)}`
-        const res = await axios.get(url, { responseType: 'arraybuffer' })
+        const url = `https://aqul-brat.hf.space/?text=${encodeURIComponent(text)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Fetch brat failed');
 
-        // simpan sementara
-        const imgPath = path.join(__dirname, '../tmp/brat.png')
-        fs.writeFileSync(imgPath, res.data)
+        const imgBuffer = Buffer.from(await res.arrayBuffer());
 
-        // kasih exif (watermark)
-        const stickerPath = await writeExifImg(
-            imgPath,
-            { packname: 'Catastroph', author: 'Brat Sticker' }
-        )
+        // =========================
+        // ADD WATERMARK (EXIF)
+        // =========================
+        const img = new webp.Image();
+        await img.load(imgBuffer);
 
-        const sticker = fs.readFileSync(stickerPath)
+        const metadata = {
+            'sticker-pack-id': crypto.randomBytes(32).toString('hex'),
+            'sticker-pack-name': settings.packname || 'Catashtroph',
+            'sticker-pack-publisher': settings.author || '@barxnl250_',
+            'emojis': ['🔥']
+        };
 
+        const exifAttr = Buffer.from([
+            0x49,0x49,0x2A,0x00,0x08,0x00,0x00,0x00,
+            0x01,0x00,0x41,0x57,0x07,0x00,0x00,0x00,
+            0x00,0x00,0x16,0x00,0x00,0x00
+        ]);
+
+        const jsonBuffer = Buffer.from(JSON.stringify(metadata), 'utf8');
+        const exif = Buffer.concat([exifAttr, jsonBuffer]);
+        exif.writeUIntLE(jsonBuffer.length, 14, 4);
+
+        img.exif = exif;
+
+        const finalSticker = await img.save(null);
+
+        // =========================
+        // SEND STICKER
+        // =========================
         await sock.sendMessage(
             chatId,
-            { sticker },
+            { sticker: finalSticker },
             { quoted: message }
-        )
+        );
 
-        // cleanup
-        fs.unlinkSync(imgPath)
-        fs.unlinkSync(stickerPath)
-
-    } catch (e) {
-        console.error('BRAT ERROR:', e)
-        // diam aja kalau error (biar gak spam ❌)
+    } catch (err) {
+        console.error('sbrat wm error:', err);
+        await sock.sendMessage(
+            chatId,
+            { text: '❌ Gagal bikin stiker brat' },
+            { quoted: message }
+        );
     }
 }
+
+module.exports = sbratCommand;
