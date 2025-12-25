@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const settings = require('../settings');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
 function loadState() {
@@ -56,8 +55,14 @@ async function handleMentionDetection(sock, chatId, message) {
 		if (!state.enabled) return;
 
 		// Normalize bot JID (handles formats like '12345:abcd@...')
-		const botNumb = settings.ownerNumber;
-const botJids = botNumb + '@s.whatsapp.net';
+		const rawId = sock.user?.id || sock.user?.jid || '';
+		if (!rawId) return;
+		const botNum = rawId.split('@')[0].split(':')[0];
+		const botJids = [
+			`${botNum}@s.whatsapp.net`,
+			`${botNum}@whatsapp.net`,
+			rawId
+		];
 
 		// Extract contextInfo from multiple message types
 		const msg = message.message || {};
@@ -94,6 +99,13 @@ const botJids = botNumb + '@s.whatsapp.net';
 				msg.videoMessage?.caption ||
 				''
 			).toString();
+			if (rawText) {
+				const safeBot = botNum.replace(/[-\s]/g, '');
+				const re = new RegExp(`@?${safeBot}\b`);
+				if (!re.test(rawText.replace(/\s+/g, ''))) return;
+			} else {
+				return;
+			}
 		}
 		const isBotMentioned = mentioned.some(j => botJids.includes(j));
 		if (!isBotMentioned) {
