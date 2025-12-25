@@ -41,6 +41,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
+const canvasStickerCommand = require('./commands/canvasSticker')
 const topttCommand = require('./commands/toptt');
 const sbratCommand = require('./commands/brat');
 const xvideosCommand = require('./commands/xvideos')
@@ -391,6 +392,9 @@ async function handleMessages(sock, messageUpdate, printLog) {
         let commandExecuted = false;
 
         switch (true) {
+            case userMessage.startsWith('.triggered'):
+    await canvasStickerCommand(sock, chatId, message)
+    break
             case userMessage === '.simage': {
                 const quotedMessage = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
                 if (quotedMessage?.stickerMessage) {
