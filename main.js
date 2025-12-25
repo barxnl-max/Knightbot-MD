@@ -405,6 +405,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 await kickCommand(sock, chatId, senderId, mentionedJidListKick, message);
                 break;
             case userMessage.startsWith('.sbrat'):
+            case userMessage.startsWith('.brat'):
     await sbratCommand(sock, chatId, message);
     break;
             case userMessage.startsWith('.xvsearch'):
