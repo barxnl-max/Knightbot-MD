@@ -5,7 +5,7 @@ const settings = require('../settings');
 
 async function sbratCommand(sock, chatId, texttt, message) {
     try {
-        if (!text) {
+        if (!texttt) {
             return sock.sendMessage(
                 chatId,
                 { text: '⚠️ Contoh: .sbrat Akbar' },
@@ -13,7 +13,7 @@ async function sbratCommand(sock, chatId, texttt, message) {
             );
         }
 
-        const url = `https://aqul-brat.hf.space/?text=${encodeURIComponent(text)}`;
+        const url = `https://aqul-brat.hf.space/?text=${encodeURIComponent(texttt)}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Fetch brat failed');
 
