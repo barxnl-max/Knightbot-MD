@@ -24,7 +24,7 @@ async function waifuPicsCommand(sock, chatId, message, args = [], nsfw = false) 
         if (!list.includes(type)) {
             return sock.sendMessage(
                 chatId,
-                { text: `❌ Type tidak valid\n\n${list.join(', ')}` },
+                { text: `❌ Type tidak valid\n\nAvailable:\n${list.join(', ')}` },
                 { quoted: message }
             );
         }
@@ -32,7 +32,7 @@ async function waifuPicsCommand(sock, chatId, message, args = [], nsfw = false) 
         const api = `https://api.waifu.pics/${nsfw ? 'nsfw' : 'sfw'}/${type}`;
         const res = await fetch(api);
         const json = await res.json();
-        if (!json?.url) throw 'NO_URL';
+        if (!json?.url) throw new Error('NO_URL');
 
         const mediaRes = await fetch(json.url);
         const buffer = Buffer.from(await mediaRes.arrayBuffer());
@@ -42,14 +42,15 @@ async function waifuPicsCommand(sock, chatId, message, args = [], nsfw = false) 
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
         // =======================
-        // GIF / WEBP
+        // GIF / WEBP → MP4
         // =======================
         if (ext === 'gif' || ext === 'webp') {
             const input = path.join(tmpDir, Date.now() + '.' + ext);
             fs.writeFileSync(input, buffer);
 
-            const ezgif = new EzGif();
-            const mp4Url = await ezgif.WebP2mp4(input);
+            // 🔥 FIX DI SINI
+            const mp4Url = await EzGif.WebP2mp4(input);
+
             fs.unlinkSync(input);
 
             return sock.sendMessage(
@@ -67,7 +68,7 @@ async function waifuPicsCommand(sock, chatId, message, args = [], nsfw = false) 
         // =======================
         // IMAGE
         // =======================
-        await sock.sendMessage(
+        return sock.sendMessage(
             chatId,
             {
                 image: buffer,
@@ -79,9 +80,9 @@ async function waifuPicsCommand(sock, chatId, message, args = [], nsfw = false) 
 
     } catch (err) {
         console.error('waifupics error:', err);
-        sock.sendMessage(
+        return sock.sendMessage(
             chatId,
-            { text: '❌ Gagal ambil waifu (API / GIF error)' },
+            { text: '❌ Gagal ambil waifu (API / ezgif error)' },
             { quoted: message }
         );
     }
