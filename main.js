@@ -410,16 +410,17 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 const mentionedJidListKick = message.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
                 await kickCommand(sock, chatId, senderId, mentionedJidListKick, message);
                 break;
-         case userMessage.startsWith('.waifu'): {
-    const args = userMessage.split(' ').slice(1);
-    await waifuPicsCommand(sock, chatId, message, args, false);
-         }
-    break;
-case userMessage.startsWith('.waifunsfw'): {
+         case userMessage.startsWith('.waifunsfw'): {
     const args = userMessage.split(' ').slice(1);
     await waifuPicsCommand(sock, chatId, message, args, true);
 }
-    break;
+break;
+
+case userMessage.startsWith('.waifu'): {
+    const args = userMessage.split(' ').slice(1);
+    await waifuPicsCommand(sock, chatId, message, args, false);
+}
+break;
             case userMessage.startsWith('.toptt'):
     await topttCommand(sock, chatId, message);
     break;
