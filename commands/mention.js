@@ -54,17 +54,17 @@ async function handleMentionDetection(sock, chatId, message) {
 		await ensureDefaultSticker(state);
 		if (!state.enabled) return;
 
-		// Normalize bot JID (handles formats like '12345:abcd@...')
-		const rawId = sock.user?.id || sock.user?.jid || '';
-		if (!rawId) return;
-		const botNum = "6285654716030"
+		const botNum = "6285654716030";
 		const botJids = [
 			`${botNum}@s.whatsapp.net`,
 			`${botNum}@whatsapp.net`,
 		];
 
-		// Extract contextInfo from multiple message types
 		const msg = message.message || {};
+
+		// ======================
+		// COLLECT MENTIONED JID
+		// ======================
 		const contexts = [
 			msg.extendedTextMessage?.contextInfo,
 			msg.imageMessage?.contextInfo,
@@ -78,19 +78,29 @@ async function handleMentionDetection(sock, chatId, message) {
 		let mentioned = [];
 		for (const c of contexts) {
 			if (Array.isArray(c.mentionedJid)) {
-				mentioned = mentioned.concat(c.mentionedJid);
+				mentioned.push(...c.mentionedJid);
 			}
 		}
 
-		// Also capture direct mentionedJid arrays on messages (some clients/placeholders set it here)
 		const directMentionLists = [
 			msg.extendedTextMessage?.mentionedJid,
 			msg.mentionedJid
 		].filter(Array.isArray);
-		for (const arr of directMentionLists) mentioned = mentioned.concat(arr);
 
-		if (!mentioned.length) {
-			// Heuristic fallback: detect if the text includes the bot's number as a mention-like token
+		for (const arr of directMentionLists) {
+			mentioned.push(...arr);
+		}
+
+		// ======================
+		// FINAL BOT DETECTION
+		// ======================
+
+		if (mentioned.length > 0) {
+			// 🔒 ADA mention → HARUS BOT
+			const isBotMentioned = mentioned.some(jid => botJids.includes(jid));
+			if (!isBotMentioned) return;
+		} else {
+			// 🧠 TIDAK ada mention → fallback regex
 			const rawText = (
 				msg.conversation ||
 				msg.extendedTextMessage?.text ||
@@ -98,57 +108,66 @@ async function handleMentionDetection(sock, chatId, message) {
 				msg.videoMessage?.caption ||
 				''
 			).toString();
-			if (rawText) {
-				const safeBot = botNum.replace(/[-\s]/g, '');
-				const re = new RegExp(`@?${safeBot}\b`);
-				if (!re.test(rawText.replace(/\s+/g, ''))) return;
-			} else {
-				return;
-			}
-		}
-		const isBotMentioned = mentioned.some(j => botJids.includes(j));
-		if (!isBotMentioned) {
-			// If no formal mention but heuristic matched, proceed silently
+
+			if (!rawText) return;
+
+			const safeBot = botNum.replace(/[-\s]/g, '');
+			const re = new RegExp(`@?${safeBot}\\b`);
+			if (!re.test(rawText.replace(/\s+/g, ''))) return;
 		}
 
-		// Send custom asset or default fallback
+		// ======================
+		// SEND RESPONSE
+		// ======================
 		if (!state.assetPath) {
 			await sock.sendMessage(chatId, { text: 'Hi' }, { quoted: message });
 			return;
 		}
+
 		const assetPath = path.join(__dirname, '..', state.assetPath);
-        // If configured asset does not exist, send plain text "Hi" as a safe default
-        if (!fs.existsSync(assetPath)) {
-            await sock.sendMessage(chatId, { text: 'Hi' }, { quoted: message });
-            return;
-        }
-        try {
-            if (state.type === 'sticker') {
-                await sock.sendMessage(chatId, { sticker: fs.readFileSync(assetPath) }, { quoted: message });
-                return;
-            }
-            const payload = {};
-            if (state.type === 'image') payload.image = fs.readFileSync(assetPath);
-            else if (state.type === 'video') {
-                payload.video = fs.readFileSync(assetPath);
-                if (state.gifPlayback) payload.gifPlayback = true;
-            }
-            else if (state.type === 'audio') {
-                payload.audio = fs.readFileSync(assetPath);
-                if (state.mimetype) payload.mimetype = state.mimetype; else payload.mimetype = 'audio/mpeg';
-                if (typeof state.ptt === 'boolean') payload.ptt = state.ptt;
-            }
-            else if (state.type === 'text') payload.text = fs.readFileSync(assetPath, 'utf8');
-            else payload.text = 'Hi';
-            await sock.sendMessage(chatId, payload, { quoted: message });
-        } catch (e) {
-            await sock.sendMessage(chatId, { text: 'Hi' }, { quoted: message });
-        }
+		if (!fs.existsSync(assetPath)) {
+			await sock.sendMessage(chatId, { text: 'Hi' }, { quoted: message });
+			return;
+		}
+
+		try {
+			if (state.type === 'sticker') {
+				await sock.sendMessage(
+					chatId,
+					{ sticker: fs.readFileSync(assetPath) },
+					{ quoted: message }
+				);
+				return;
+			}
+
+			const payload = {};
+			if (state.type === 'image') payload.image = fs.readFileSync(assetPath);
+			else if (state.type === 'video') {
+				payload.video = fs.readFileSync(assetPath);
+				if (state.gifPlayback) payload.gifPlayback = true;
+			}
+			else if (state.type === 'audio') {
+				payload.audio = fs.readFileSync(assetPath);
+				payload.mimetype = state.mimetype || 'audio/mpeg';
+				if (typeof state.ptt === 'boolean') payload.ptt = state.ptt;
+			}
+			else if (state.type === 'text') {
+				payload.text = fs.readFileSync(assetPath, 'utf8');
+			}
+			else {
+				payload.text = 'Hi';
+			}
+
+			await sock.sendMessage(chatId, payload, { quoted: message });
+
+		} catch {
+			await sock.sendMessage(chatId, { text: 'Hi' }, { quoted: message });
+		}
+
 	} catch (err) {
 		console.error('handleMentionDetection error:', err);
 	}
 }
-
 async function mentionToggleCommand(sock, chatId, message, args, isOwner) {
 	if (!isOwner) return sock.sendMessage(chatId, { text: 'Only Owner or Sudo can use this command.' }, { quoted: message });
 	const onoff = (args || '').trim().toLowerCase();
@@ -263,4 +282,3 @@ async function setMentionCommand(sock, chatId, message, isOwner) {
 }
 
 module.exports = { handleMentionDetection, mentionToggleCommand, setMentionCommand };
-
