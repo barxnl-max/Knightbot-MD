@@ -410,7 +410,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 const mentionedJidListKick = message.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
                 await kickCommand(sock, chatId, senderId, mentionedJidListKick, message);
                 break;
-            case userMessage.startsWith('.waifu'): {
+            /* case userMessage.startsWith('.waifu'): {
     const type = userMessage.split(' ')[1] || 'waifu';
     await waifuPicsCommand(sock, chatId, message, type, false);
 }
@@ -419,7 +419,26 @@ case userMessage.startsWith('.nsfwwaifu'): {
     const type = userMessage.split(' ')[1] || 'waifu';
     await waifuPicsCommand(sock, chatId, message, type, true);
 }
-break;
+break; */
+            case userMessage.startsWith('.waifu'):
+    await waifuPicsCommand(
+        sock,
+        chatId,
+        message,
+        userMessage.split(' ').slice(1), // args
+        false // nsfw
+    );
+    break;
+
+case userMessage.startsWith('.waifunsfw'):
+    await waifuPicsCommand(
+        sock,
+        chatId,
+        message,
+        userMessage.split(' ').slice(1),
+        true
+    );
+    break;
             case userMessage.startsWith('.toptt'):
     await topttCommand(sock, chatId, message);
     break;
