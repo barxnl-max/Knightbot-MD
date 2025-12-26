@@ -7,48 +7,24 @@ const EzGif = require('../lib/ezgif');
 // TYPE LIST
 // =======================
 const SFW = [
-    'waifu',
-    'neko',
-    'shinobu',
-    'megumin',
-    'bully',
-    'cuddle',
-    'cry',
-    'hug',
-    'awoo',
-    'kiss',
-    'lick',
-    'pat',
-    'smug',
-    'bonk',
-    'yeet',
-    'blush',
-    'smile',
-    'wave',
-    'highfive',
-    'handhold',
-    'nom',
-    'bite',
-    'glomp',
-    'slap',
-    'kill',
-    'kick',
-    'happy',
-    'wink',
-    'poke',
-    'dance',
-    'cringe'
+    'waifu','neko','shinobu','megumin','bully','cuddle','cry','hug','awoo',
+    'kiss','lick','pat','smug','bonk','yeet','blush','smile','wave','highfive',
+    'handhold','nom','bite','glomp','slap','kill','kick','happy','wink',
+    'poke','dance','cringe'
 ];
 
-const NSFW = [
-    'waifu',
-    'neko',
-    'trap',
-    'blowjob'
-];
+const NSFW = ['waifu','neko','trap','blowjob'];
 
-async function waifuPicsCommand(sock, chatId, message, type = 'waifu', nsfw = false) {
+async function waifuPicsCommand(sock, chatId, message, args = [], nsfw = false) {
+    let loadingMsg;
+
     try {
+        // =======================
+        // PARSE ARGUMENT
+        // =======================
+        const hasRvo = args.includes('--rvo');
+        const type = args.find(a => a !== '--rvo') || 'waifu';
+
         const list = nsfw ? NSFW : SFW;
 
         if (!list.includes(type)) {
@@ -59,19 +35,29 @@ async function waifuPicsCommand(sock, chatId, message, type = 'waifu', nsfw = fa
             );
         }
 
+        // =======================
+        // SEND TEMP MESSAGE
+        // =======================
+        if (hasRvo) {
+            loadingMsg = await sock.sendMessage(
+                chatId,
+                { text: '⏳ Mencari waifu...' },
+                { quoted: message }
+            );
+        }
+
+        // =======================
+        // FETCH API
+        // =======================
         const api = `https://api.waifu.pics/${nsfw ? 'nsfw' : 'sfw'}/${type}`;
         const res = await fetch(api);
         const json = await res.json();
-
         if (!json?.url) throw new Error('No URL');
 
-        // =======================
-        // DOWNLOAD
-        // =======================
         const mediaRes = await fetch(json.url);
         const buffer = Buffer.from(await mediaRes.arrayBuffer());
-
         const ext = json.url.split('.').pop().toLowerCase();
+
         const tmpDir = path.join(__dirname, '..', 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
@@ -85,7 +71,7 @@ async function waifuPicsCommand(sock, chatId, message, type = 'waifu', nsfw = fa
             const mp4Url = await EzGif.WebP2mp4(input);
             fs.unlinkSync(input);
 
-            return sock.sendMessage(
+            await sock.sendMessage(
                 chatId,
                 {
                     video: { url: mp4Url },
@@ -94,22 +80,34 @@ async function waifuPicsCommand(sock, chatId, message, type = 'waifu', nsfw = fa
                 },
                 { quoted: message }
             );
+        } else {
+            // =======================
+            // IMAGE
+            // =======================
+            await sock.sendMessage(
+                chatId,
+                {
+                    image: buffer,
+                    caption: `✨ waifu.pics (${type})`
+                },
+                { quoted: message }
+            );
         }
 
         // =======================
-        // IMAGE BIASA
+        // DELETE TEMP MESSAGE
         // =======================
-        return sock.sendMessage(
-            chatId,
-            {
-                image: buffer,
-                caption: `✨ waifu.pics (${type})`
-            },
-            { quoted: message }
-        );
+        if (hasRvo && loadingMsg?.key) {
+            await sock.sendMessage(chatId, { delete: loadingMsg.key });
+        }
 
     } catch (err) {
         console.error('waifupics error:', err);
+
+        if (loadingMsg?.key) {
+            await sock.sendMessage(chatId, { delete: loadingMsg.key });
+        }
+
         await sock.sendMessage(
             chatId,
             { text: '❌ Gagal ambil waifu (rate limit / error)' },
