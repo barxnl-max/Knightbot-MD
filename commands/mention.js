@@ -57,11 +57,10 @@ async function handleMentionDetection(sock, chatId, message) {
 		// Normalize bot JID (handles formats like '12345:abcd@...')
 		const rawId = sock.user?.id || sock.user?.jid || '';
 		if (!rawId) return;
-		const botNum = rawId.split('@')[0].split(':')[0];
+		const botNum = "6285654716030"
 		const botJids = [
 			`${botNum}@s.whatsapp.net`,
 			`${botNum}@whatsapp.net`,
-			rawId
 		];
 
 		// Extract contextInfo from multiple message types
