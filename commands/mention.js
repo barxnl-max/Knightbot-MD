@@ -53,14 +53,13 @@ async function handleMentionDetection(sock, chatId, message) {
 		const state = loadState();
 		if (!state.enabled) return;
 
-		const botJid = sock.user?.id;
-		if (!botJid) return;
+		const botJidRaw = sock.user?.id;
+		if (!botJidRaw) return;
+
+		const botJid = normalizeJid(botJidRaw);
 
 		const msg = message.message || {};
 
-		// ======================
-		// AMBIL CONTEXT INFO
-		// ======================
 		const ctx =
 			msg.extendedTextMessage?.contextInfo ||
 			msg.imageMessage?.contextInfo ||
@@ -70,14 +69,16 @@ async function handleMentionDetection(sock, chatId, message) {
 
 		if (!ctx || !Array.isArray(ctx.mentionedJid)) return;
 
-		// ======================
-		// VALIDASI: HARUS BOT
-		// ======================
-		if (!ctx.mentionedJid.includes(botJid)) return;
+		// =====================
+		// NORMALIZE SEMUA MENTION
+		// =====================
+		const mentioned = ctx.mentionedJid.map(j => normalizeJid(j));
 
-		// ======================
-		// KIRIM RESPONSE
-		// ======================
+		if (!mentioned.includes(botJid)) return;
+
+		// =====================
+		// RESPON
+		// =====================
 		if (!state.assetPath) {
 			await sock.sendMessage(chatId, { text: 'Hi' }, { quoted: message });
 			return;
@@ -122,6 +123,7 @@ async function handleMentionDetection(sock, chatId, message) {
 		console.error('handleMentionDetection error:', err);
 	}
 }
+
 
 async function mentionToggleCommand(sock, chatId, message, args, isOwner) {
 	if (!isOwner) return sock.sendMessage(chatId, { text: 'Only Owner or Sudo can use this command.' }, { quoted: message });
