@@ -51,73 +51,32 @@ async function handleMentionDetection(sock, chatId, message) {
 		if (message.key?.fromMe) return;
 
 		const state = loadState();
-		await ensureDefaultSticker(state);
 		if (!state.enabled) return;
 
-		const botNum = "6285654716030";
-		const botJids = [
-			`${botNum}@s.whatsapp.net`,
-			`${botNum}@whatsapp.net`,
-		];
+		const botJid = sock.user?.id;
+		if (!botJid) return;
 
 		const msg = message.message || {};
 
 		// ======================
-		// COLLECT MENTIONED JID
+		// AMBIL CONTEXT INFO
 		// ======================
-		const contexts = [
-			msg.extendedTextMessage?.contextInfo,
-			msg.imageMessage?.contextInfo,
-			msg.videoMessage?.contextInfo,
-			msg.documentMessage?.contextInfo,
-			msg.stickerMessage?.contextInfo,
-			msg.buttonsResponseMessage?.contextInfo,
-			msg.listResponseMessage?.contextInfo
-		].filter(Boolean);
+		const ctx =
+			msg.extendedTextMessage?.contextInfo ||
+			msg.imageMessage?.contextInfo ||
+			msg.videoMessage?.contextInfo ||
+			msg.documentMessage?.contextInfo ||
+			msg.stickerMessage?.contextInfo;
 
-		let mentioned = [];
-		for (const c of contexts) {
-			if (Array.isArray(c.mentionedJid)) {
-				mentioned.push(...c.mentionedJid);
-			}
-		}
-
-		const directMentionLists = [
-			msg.extendedTextMessage?.mentionedJid,
-			msg.mentionedJid
-		].filter(Array.isArray);
-
-		for (const arr of directMentionLists) {
-			mentioned.push(...arr);
-		}
+		if (!ctx || !Array.isArray(ctx.mentionedJid)) return;
 
 		// ======================
-		// FINAL BOT DETECTION
+		// VALIDASI: HARUS BOT
 		// ======================
-
-		if (mentioned.length > 0) {
-			// 🔒 ADA mention → HARUS BOT
-			const isBotMentioned = mentioned.some(jid => botJids.includes(jid));
-			if (!isBotMentioned) return;
-		} else {
-			// 🧠 TIDAK ada mention → fallback regex
-			const rawText = (
-				msg.conversation ||
-				msg.extendedTextMessage?.text ||
-				msg.imageMessage?.caption ||
-				msg.videoMessage?.caption ||
-				''
-			).toString();
-
-			if (!rawText) return;
-
-			const safeBot = botNum.replace(/[-\s]/g, '');
-			const re = new RegExp(`@?${safeBot}\\b`);
-			if (!re.test(rawText.replace(/\s+/g, ''))) return;
-		}
+		if (!ctx.mentionedJid.includes(botJid)) return;
 
 		// ======================
-		// SEND RESPONSE
+		// KIRIM RESPONSE
 		// ======================
 		if (!state.assetPath) {
 			await sock.sendMessage(chatId, { text: 'Hi' }, { quoted: message });
@@ -130,44 +89,40 @@ async function handleMentionDetection(sock, chatId, message) {
 			return;
 		}
 
-		try {
-			if (state.type === 'sticker') {
-				await sock.sendMessage(
-					chatId,
-					{ sticker: fs.readFileSync(assetPath) },
-					{ quoted: message }
-				);
-				return;
-			}
-
-			const payload = {};
-			if (state.type === 'image') payload.image = fs.readFileSync(assetPath);
-			else if (state.type === 'video') {
-				payload.video = fs.readFileSync(assetPath);
-				if (state.gifPlayback) payload.gifPlayback = true;
-			}
-			else if (state.type === 'audio') {
-				payload.audio = fs.readFileSync(assetPath);
-				payload.mimetype = state.mimetype || 'audio/mpeg';
-				if (typeof state.ptt === 'boolean') payload.ptt = state.ptt;
-			}
-			else if (state.type === 'text') {
-				payload.text = fs.readFileSync(assetPath, 'utf8');
-			}
-			else {
-				payload.text = 'Hi';
-			}
-
-			await sock.sendMessage(chatId, payload, { quoted: message });
-
-		} catch {
-			await sock.sendMessage(chatId, { text: 'Hi' }, { quoted: message });
+		if (state.type === 'sticker') {
+			await sock.sendMessage(
+				chatId,
+				{ sticker: fs.readFileSync(assetPath) },
+				{ quoted: message }
+			);
+			return;
 		}
+
+		const payload = {};
+		if (state.type === 'image') payload.image = fs.readFileSync(assetPath);
+		else if (state.type === 'video') {
+			payload.video = fs.readFileSync(assetPath);
+			if (state.gifPlayback) payload.gifPlayback = true;
+		}
+		else if (state.type === 'audio') {
+			payload.audio = fs.readFileSync(assetPath);
+			payload.mimetype = state.mimetype || 'audio/mpeg';
+			if (typeof state.ptt === 'boolean') payload.ptt = state.ptt;
+		}
+		else if (state.type === 'text') {
+			payload.text = fs.readFileSync(assetPath, 'utf8');
+		}
+		else {
+			payload.text = 'Hi';
+		}
+
+		await sock.sendMessage(chatId, payload, { quoted: message });
 
 	} catch (err) {
 		console.error('handleMentionDetection error:', err);
 	}
 }
+
 async function mentionToggleCommand(sock, chatId, message, args, isOwner) {
 	if (!isOwner) return sock.sendMessage(chatId, { text: 'Only Owner or Sudo can use this command.' }, { quoted: message });
 	const onoff = (args || '').trim().toLowerCase();
