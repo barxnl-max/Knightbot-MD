@@ -1083,11 +1083,21 @@ case userMessage.startsWith('>'): {
             case userMessage.startsWith('.video') || userMessage.startsWith('.ytmp4'):
                 await videoCommand(sock, chatId, message);
                 break;
-case userMessage.startsWith(".tiktok"):
-case userMessage.startsWith(".tiktokmp3"):
+case userMessage.startsWith(".tiktokmp3"): {
+  const args = userMessage.split(" ").slice(1);
+  await tiktokCommand(sock, chatId, message, args, "tiktokmp3");
+}
+break;
+
 case userMessage.startsWith(".tiktokall"): {
   const args = userMessage.split(" ").slice(1);
-  await tiktokCommand(sock, chatId, message, args);
+  await tiktokCommand(sock, chatId, message, args, "tiktokall");
+}
+break;
+
+case userMessage.startsWith(".tiktok"): {
+  const args = userMessage.split(" ").slice(1);
+  await tiktokCommand(sock, chatId, message, args, "tiktok");
 }
 break;
             case userMessage.startsWith('.gpt') || userMessage.startsWith('.gemini'):
