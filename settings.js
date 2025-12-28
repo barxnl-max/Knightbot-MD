@@ -3,7 +3,7 @@ const settings = {
   author: '‎@barxnl250_',
   botName: "Lydia Bot",
   botOwner: 'Kontlo', // Your name
-  ownerNumber: '6285654716030', //Set your numbjer here without + symbol, just add country code & number without any space
+  ownerNumber: '62856547160830', //Set your numbjer here without + symbol, just add country code & number without any space
   giphyApiKey: 'qnl7ssQChTdPjsKta2Ax2LMaGXz303tq',
   commandMode: "public",
   maxStoreMessages: 20, 
