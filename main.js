@@ -41,6 +41,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
+const nsfwCommand = require('./commands/nsfw');
 const waifuPicsCommand = require('./commands/waifupics');
 const canvasStickerCommand = require('./commands/canvasSticker')
 const topttCommand = require('./commands/toptt');
@@ -437,6 +438,16 @@ break;
             userMessage
         )
         break
+            case userMessage.startsWith('.nsfw'): {
+    const args = userMessage.split(' ').slice(1);
+    await nsfwCommand(sock, chatId, message, args);
+}
+break;
+
+case userMessage === '.nsfwlist': {
+    await nsfwCommand(sock, chatId, message, ['list']);
+}
+break;
             case userMessage.startsWith('.snapsave'):
         await snapsaveCommand(sock, chatId, message, userMessage, channelInfo)
         break
