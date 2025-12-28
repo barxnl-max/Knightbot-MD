@@ -292,7 +292,65 @@ async function handleMessages(sock, messageUpdate, printLog) {
         channelInfo
     )
 } 
-        
+        const fs = require('fs');
+const AFK = require('./lib/afk');
+
+async function handleAFK(sock, message, chatId, senderId, userMessage = '') {
+    if (!message.message) return;
+
+    // ======================
+    // AUTO OFF JIKA USER AFK & NGETIK
+    // ======================
+    const myAfk = AFK.get(senderId);
+    if (
+        myAfk &&
+        userMessage &&
+        !userMessage.startsWith('.') // bukan command
+    ) {
+        AFK.del(senderId);
+        await sock.sendMessage(
+            chatId,
+            { text: '✅ Kamu sudah kembali dari AFK' },
+            { quoted: message }
+        );
+        return;
+    }
+
+    // ======================
+    // CEK TAG / REPLY
+    // ======================
+    const ctx = message.message?.extendedTextMessage?.contextInfo;
+    if (!ctx) return;
+
+    const mentioned = ctx.mentionedJid || [];
+    const repliedJid = ctx.participant;
+
+    const db = AFK.all();
+
+    for (const jid of Object.keys(db)) {
+        if (mentioned.includes(jid) || repliedJid === jid) {
+            const data = db[jid];
+            const caption = `💤 Dia sedang AFK\nAlasan: ${data.reason}`;
+
+            if (data.media && fs.existsSync(data.media.path)) {
+                await sock.sendMessage(
+                    chatId,
+                    {
+                        [data.media.type]: fs.readFileSync(data.media.path),
+                        caption
+                    },
+                    { quoted: message }
+                );
+            } else {
+                await sock.sendMessage(
+                    chatId,
+                    { text: caption },
+                    { quoted: message }
+                );
+            }
+        }
+    }
+}
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
         // Check for bad words and antilink FIRST, before ANY other processing
