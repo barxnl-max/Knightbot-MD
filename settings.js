@@ -8,7 +8,7 @@ const settings = {
   commandMode: "public",
   maxStoreMessages: 20, 
   storeWriteInterval: 10000,
-  description: "This is a bot for managing group commands and automating tasksn.",
+  description: "This is a bot for managing ghroup commands and automating tasksn.",
   version: "3.0.5",
   updateZipUrl: "https://github.com/mruniquehacker/Knightbot-MD/archive/refs/heads/main.zip",
 };
