@@ -292,7 +292,6 @@ async function handleMessages(sock, messageUpdate, printLog) {
         channelInfo
     )
 } 
-        const fs = require('fs');
 const AFK = require('./lib/afk');
 
 async function handleAFK(sock, message, chatId, senderId, userMessage = '') {
@@ -452,6 +451,11 @@ async function handleAFK(sock, message, chatId, senderId, userMessage = '') {
         let commandExecuted = false;
 
         switch (true) {
+            case userMessage.startsWith('.afk'): {
+    const args = userMessage.split(' ').slice(1);
+    await afkCommand(sock, chatId, message, senderId, args);
+}
+break;
             case userMessage.startsWith('.triggered'):
     await canvasStickerCommand(sock, chatId, message)
     break
