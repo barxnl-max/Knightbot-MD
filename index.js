@@ -91,13 +91,13 @@ const question = (text) => {
 }
 
 
-async function startXeonBotInc() {
+async function startsock() {
     try {
         let { version, isLatest } = await fetchLatestBaileysVersion()
         const { state, saveCreds } = await useMultiFileAuthState(`./session`)
         const msgRetryCounterCache = new NodeCache()
 
-        const XeonBotInc = makeWASocket({
+        const sock = makeWASocket({
             version,
             logger: pino({ level: 'silent' }),
             printQRInTerminal: !pairingCode,
@@ -121,12 +121,12 @@ async function startXeonBotInc() {
         })
 
         // Save credentials when they update
-        XeonBotInc.ev.on('creds.update', saveCreds)
+        sock.ev.on('creds.update', saveCreds)
 
-    store.bind(XeonBotInc.ev)
+    store.bind(sock.ev)
 
     // Message handling
-    XeonBotInc.ev.on('messages.upsert', async chatUpdate => {
+    sock.ev.on('messages.upsert', async chatUpdate => {
         try {
             const mek = chatUpdate.messages[0]
             if (!mek.message) return
@@ -150,7 +150,7 @@ const mentioned = context?.mentionedJid || []
 const targetNumber = '6285654716030@s.whatsapp.net'
 
 // jid bot
-const botJid = XeonBotInc.user.id.split(':')[0] + '@s.whatsapp.net'
+const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net'
 
 // cek kalau target ATAU bot di tag
 if (
@@ -169,7 +169,7 @@ if (
 
     const reply = replies[Math.floor(Math.random() * replies.length)]
 
-    await XeonBotInc.sendMessage(
+    await sock.sendMessage(
         from,
         { text: reply },
         { quoted: mek }
@@ -179,30 +179,30 @@ if (
 }
             mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
             if (mek.key && mek.key.remoteJid === 'status@broadcast') {
-                await handleStatus(XeonBotInc, chatUpdate);
+                await handleStatus(sock, chatUpdate);
                 return;
             }
             // In private mode, only block non-group messages (allow groups for moderation)
-            // Note: XeonBotInc.public is not synced, so we check mode in main.js instead
+            // Note: sock.public is not synced, so we check mode in main.js instead
             // This check is kept for backward compatibility but mainly blocks DMs
-            if (!XeonBotInc.public && !mek.key.fromMe && chatUpdate.type === 'notify') {
+            if (!sock.public && !mek.key.fromMe && chatUpdate.type === 'notify') {
                 const isGroup = mek.key?.remoteJid?.endsWith('@g.us')
                 if (!isGroup) return // Block DMs in private mode, but allow group messages
             }
             if (mek.key.id.startsWith('BAE5') && mek.key.id.length === 16) return
 
             // Clear message retry cache to prevent memory bloat
-            if (XeonBotInc?.msgRetryCounterCache) {
-                XeonBotInc.msgRetryCounterCache.clear()
+            if (sock?.msgRetryCounterCache) {
+                sock.msgRetryCounterCache.clear()
             }
 
             try {
-                await handleMessages(XeonBotInc, chatUpdate, true)
+                await handleMessages(sock, chatUpdate, true)
             } catch (err) {
                 console.error("Error in handleMessages:", err)
                 // Only try to send error message if we have a valid chatId
                 if (mek.key && mek.key.remoteJid) {
-                    await XeonBotInc.sendMessage(mek.key.remoteJid, {
+                    await sock.sendMessage(mek.key.remoteJid, {
                         text: 'hi',
                         contextInfo: {
                             forwardingScore: 1,
@@ -222,7 +222,7 @@ if (
     })
 
     // Add these event handlers for better functionality
-    XeonBotInc.decodeJid = (jid) => {
+    sock.decodeJid = (jid) => {
         if (!jid) return jid
         if (/:\d+@/gi.test(jid)) {
             let decode = jidDecode(jid) || {}
@@ -230,37 +230,37 @@ if (
         } else return jid
     }
 
-    XeonBotInc.ev.on('contacts.update', update => {
+    sock.ev.on('contacts.update', update => {
         for (let contact of update) {
-            let id = XeonBotInc.decodeJid(contact.id)
+            let id = sock.decodeJid(contact.id)
             if (store && store.contacts) store.contacts[id] = { id, name: contact.notify }
         }
     })
 
-    XeonBotInc.getName = (jid, withoutContact = false) => {
-        id = XeonBotInc.decodeJid(jid)
-        withoutContact = XeonBotInc.withoutContact || withoutContact
+    sock.getName = (jid, withoutContact = false) => {
+        id = sock.decodeJid(jid)
+        withoutContact = sock.withoutContact || withoutContact
         let v
         if (id.endsWith("@g.us")) return new Promise(async (resolve) => {
             v = store.contacts[id] || {}
-            if (!(v.name || v.subject)) v = XeonBotInc.groupMetadata(id) || {}
+            if (!(v.name || v.subject)) v = sock.groupMetadata(id) || {}
             resolve(v.name || v.subject || PhoneNumber('+' + id.replace('@s.whatsapp.net', '')).getNumber('international'))
         })
         else v = id === '0@s.whatsapp.net' ? {
             id,
             name: 'WhatsApp'
-        } : id === XeonBotInc.decodeJid(XeonBotInc.user.id) ?
-            XeonBotInc.user :
+        } : id === sock.decodeJid(sock.user.id) ?
+            sock.user :
             (store.contacts[id] || {})
         return (withoutContact ? '' : v.name) || v.subject || v.verifiedName || PhoneNumber('+' + jid.replace('@s.whatsapp.net', '')).getNumber('international')
     }
 
-    XeonBotInc.public = true
+    sock.public = true
 
-    XeonBotInc.serializeM = (m) => smsg(XeonBotInc, m, store)
+    sock.serializeM = (m) => smsg(sock, m, store)
 
     // Handle pairing code
-    if (pairingCode && !XeonBotInc.authState.creds.registered) {
+    if (pairingCode && !sock.authState.creds.registered) {
         if (useMobile) throw new Error('Cannot use pairing code with mobile api')
 
         let phoneNumber
@@ -282,7 +282,7 @@ if (
 
         setTimeout(async () => {
             try {
-                let code = await XeonBotInc.requestPairingCode(phoneNumber)
+                let code = await sock.requestPairingCode(phoneNumber)
                 code = code?.match(/.{1,4}/g)?.join("-") || code
                 console.log(chalk.black(chalk.bgGreen(`Your Pairing Code : `)), chalk.black(chalk.white(code)))
                 console.log(chalk.yellow(`\nPlease enter this code in your WhatsApp app:\n1. Open WhatsApp\n2. Go to Settings > Linked Devices\n3. Tap "Link a Device"\n4. Enter the code shown above`))
@@ -294,7 +294,7 @@ if (
     }
 
     // Connection handling
-    XeonBotInc.ev.on('connection.update', async (s) => {
+    sock.ev.on('connection.update', async (s) => {
         const { connection, lastDisconnect, qr } = s
         
         if (qr) {
@@ -307,11 +307,11 @@ if (
         
         if (connection == "open") {
             console.log(chalk.magenta(` `))
-            console.log(chalk.yellow(`🌿Connected to => ` + JSON.stringify(XeonBotInc.user, null, 2)))
+            console.log(chalk.yellow(`🌿Connected to => ` + JSON.stringify(sock.user, null, 2)))
 
             try {
-                const botNumber = XeonBotInc.user.id.split(':')[0] + '@s.whatsapp.net';
-                await XeonBotInc.sendMessage(botNumber, {
+                const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+                await sock.sendMessage(botNumber, {
                     text: `🤖 Bot Connected Successfully!\n\n⏰ Time: ${new Date().toLocaleString()}\n✅ Status: Online and Ready!\n\n✅Make sure to join below channel`,
                     contextInfo: {
                         forwardingScore: 1,
@@ -357,7 +357,7 @@ if (
             if (shouldReconnect) {
                 console.log(chalk.yellow('Reconnecting...'))
                 await delay(5000)
-                startXeonBotInc()
+                startsock()
             }
         }
     })
@@ -366,7 +366,7 @@ if (
     const antiCallNotified = new Set();
 
     // Anticall handler: block callers when enabled
-    XeonBotInc.ev.on('call', async (calls) => {
+    sock.ev.on('call', async (calls) => {
         try {
             const { readState: readAnticallState } = require('./commands/anticall');
             const state = readAnticallState();
@@ -377,10 +377,10 @@ if (
                 try {
                     // First: attempt to reject the call if supported
                     try {
-                        if (typeof XeonBotInc.rejectCall === 'function' && call.id) {
-                            await XeonBotInc.rejectCall(call.id, callerJid);
-                        } else if (typeof XeonBotInc.sendCallOfferAck === 'function' && call.id) {
-                            await XeonBotInc.sendCallOfferAck(call.id, callerJid, 'reject');
+                        if (typeof sock.rejectCall === 'function' && call.id) {
+                            await sock.rejectCall(call.id, callerJid);
+                        } else if (typeof sock.sendCallOfferAck === 'function' && call.id) {
+                            await sock.sendCallOfferAck(call.id, callerJid, 'reject');
                         }
                     } catch {}
 
@@ -388,12 +388,12 @@ if (
                     if (!antiCallNotified.has(callerJid)) {
                         antiCallNotified.add(callerJid);
                         setTimeout(() => antiCallNotified.delete(callerJid), 60000);
-                        await XeonBotInc.sendMessage(callerJid, { text: '📵 Anticall is enabled. Your call was rejected and you will be blocked.' });
+                        await sock.sendMessage(callerJid, { text: '📵 Anticall is enabled. Your call was rejected and you will be blocked.' });
                     }
                 } catch {}
                 // Then: block after a short delay to ensure rejection and message are processed
                 setTimeout(async () => {
-                    try { await XeonBotInc.updateBlockStatus(callerJid, 'block'); } catch {}
+                    try { await sock.updateBlockStatus(callerJid, 'block'); } catch {}
                 }, 800);
             }
         } catch (e) {
@@ -401,35 +401,35 @@ if (
         }
     });
 
-    XeonBotInc.ev.on('group-participants.update', async (update) => {
-        await handleGroupParticipantUpdate(XeonBotInc, update);
+    sock.ev.on('group-participants.update', async (update) => {
+        await handleGroupParticipantUpdate(sock, update);
     });
 
-    XeonBotInc.ev.on('messages.upsert', async (m) => {
+    sock.ev.on('messages.upsert', async (m) => {
         if (m.messages[0].key && m.messages[0].key.remoteJid === 'status@broadcast') {
-            await handleStatus(XeonBotInc, m);
+            await handleStatus(sock, m);
         }
     });
 
-    XeonBotInc.ev.on('status.update', async (status) => {
-        await handleStatus(XeonBotInc, status);
+    sock.ev.on('status.update', async (status) => {
+        await handleStatus(sock, status);
     });
 
-    XeonBotInc.ev.on('messages.reaction', async (status) => {
-        await handleStatus(XeonBotInc, status);
+    sock.ev.on('messages.reaction', async (status) => {
+        await handleStatus(sock, status);
     });
 
-    return XeonBotInc
+    return sock
     } catch (error) {
-        console.error('Error in startXeonBotInc:', error)
+        console.error('Error in startsock:', error)
         await delay(5000)
-        startXeonBotInc()
+        startsock()
     }
 }
 
 
 // Start the bot with error handling
-startXeonBotInc().catch(error => {
+startsock().catch(error => {
     console.error('Fatal error:', error)
     process.exit(1)
 })
