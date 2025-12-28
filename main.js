@@ -41,6 +41,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
+const afkCommand = require('./commands/afk');
 const nsfwCommand = require('./commands/nsfw');
 const waifuPicsCommand = require('./commands/waifupics');
 const canvasStickerCommand = require('./commands/canvasSticker')
