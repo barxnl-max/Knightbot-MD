@@ -41,8 +41,6 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
-const afkCommand = require('./commands/afk');
-const nsfwCommand = require('./commands/nsfw');
 const waifuPicsCommand = require('./commands/waifupics');
 const canvasStickerCommand = require('./commands/canvasSticker')
 const topttCommand = require('./commands/toptt');
@@ -293,64 +291,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
         channelInfo
     )
 } 
-const AFK = require('./lib/afk');
 
-async function handleAFK(sock, message, chatId, senderId, userMessage = '') {
-    if (!message.message) return;
-
-    // ======================
-    // AUTO OFF JIKA USER AFK & NGETIK
-    // ======================
-    const myAfk = AFK.get(senderId);
-    if (
-        myAfk &&
-        userMessage &&
-        !userMessage.startsWith('.') // bukan command
-    ) {
-        AFK.del(senderId);
-        await sock.sendMessage(
-            chatId,
-            { text: '✅ Kamu sudah kembali dari AFK' },
-            { quoted: message }
-        );
-        return;
-    }
-
-    // ======================
-    // CEK TAG / REPLY
-    // ======================
-    const ctx = message.message?.extendedTextMessage?.contextInfo;
-    if (!ctx) return;
-
-    const mentioned = ctx.mentionedJid || [];
-    const repliedJid = ctx.participant;
-
-    const db = AFK.all();
-
-    for (const jid of Object.keys(db)) {
-        if (mentioned.includes(jid) || repliedJid === jid) {
-            const data = db[jid];
-            const caption = `💤 Dia sedang AFK\nAlasan: ${data.reason}`;
-
-            if (data.media && fs.existsSync(data.media.path)) {
-                await sock.sendMessage(
-                    chatId,
-                    {
-                        [data.media.type]: fs.readFileSync(data.media.path),
-                        caption
-                    },
-                    { quoted: message }
-                );
-            } else {
-                await sock.sendMessage(
-                    chatId,
-                    { text: caption },
-                    { quoted: message }
-                );
-            }
-        }
-    }
-}
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
         // Check for bad words and antilink FIRST, before ANY other processing
@@ -452,11 +393,6 @@ async function handleAFK(sock, message, chatId, senderId, userMessage = '') {
         let commandExecuted = false;
 
         switch (true) {
-            case userMessage.startsWith('.afk'): {
-    const args = userMessage.split(' ').slice(1);
-    await afkCommand(sock, chatId, message, senderId, args);
-}
-break;
             case userMessage.startsWith('.triggered'):
     await canvasStickerCommand(sock, chatId, message)
     break
@@ -501,16 +437,6 @@ break;
             userMessage
         )
         break
-            case userMessage.startsWith('.nsfw'): {
-    const args = userMessage.split(' ').slice(1);
-    await nsfwCommand(sock, chatId, message, args);
-}
-break;
-
-case userMessage === '.nsfwlist': {
-    await nsfwCommand(sock, chatId, message, ['list']);
-}
-break;
             case userMessage.startsWith('.snapsave'):
         await snapsaveCommand(sock, chatId, message, userMessage, channelInfo)
         break
