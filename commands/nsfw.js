@@ -2,80 +2,105 @@ const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
 const EzGif = require('../lib/ezgif');
-const { getCategories, getRandom } = require('../lib/nsfwManager');
 
-async function nsfwCommand(sock, chatId, message, args = []) {
-    try {
-        // =====================
-        // NSFW LIST
-        // =====================
-        if (args[0] === 'list') {
-            const list = getCategories();
-            return sock.sendMessage(
-                chatId,
-                { text: `🔞 NSFW List:\n\n${list.join(', ')}` },
+const NSFW_DIR = path.join(__dirname, '..', 'lib', 'nsfw');
+
+function getCategories() {
+    if (!fs.existsSync(NSFW_DIR)) return [];
+    return fs.readdirSync(NSFW_DIR)
+        .filter(f => f.endsWith('.json'))
+        .map(f => f.replace('.json', '').toLowerCase());
+}
+
+function getRandom(category) {
+    const file = path.join(NSFW_DIR, `${category}.json`);
+    if (!fs.existsSync(file)) return null;
+
+    const data = JSON.parse(fs.readFileSync(file));
+    if (!Array.isArray(data) || !data.length) return null;
+
+    return data[Math.floor(Math.random() * data.length)];
+}
+
+module.exports = async function nsfwCommand(sock, chatId, message, args = []) {
+
+    // =====================
+    // NSFW LIST
+    // =====================
+    if (args[0] === 'list') {
+        const categories = getCategories();
+        if (!categories.length) {
+            return sock.sendMessage(chatId,
+                { text: '❌ NSFW list kosong' },
                 { quoted: message }
             );
         }
 
-        const hasVV = args.includes('--vv');
-        const category = args.find(v => !v.startsWith('--')) || null;
-
-        const { category: picked, url } = getRandom(category);
-
-        // =====================
-        // DOWNLOAD
-        // =====================
-        const res = await fetch(url);
-        const buffer = Buffer.from(await res.arrayBuffer());
-        const ext = url.split('.').pop().toLowerCase();
-
-        const tmpDir = path.join(__dirname, '..', 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-        // =====================
-        // GIF / WEBP → MP4
-        // =====================
-        if (ext === 'gif' || ext === 'webp') {
-            const input = path.join(tmpDir, Date.now() + '.' + ext);
-            fs.writeFileSync(input, buffer);
-
-            const mp4Url = await EzGif.WebP2mp4(input);
-            fs.unlinkSync(input);
-
-            return sock.sendMessage(
-                chatId,
-                {
-                    video: { url: mp4Url },
-                    gifPlayback: true,
-                    viewOnce: hasVV,
-                    caption: `🔞 NSFW (${picked})`
-                },
-                { quoted: message }
-            );
-        }
-
-        // =====================
-        // IMAGE
-        // =====================
-        await sock.sendMessage(
-            chatId,
-            {
-                image: buffer,
-                viewOnce: hasVV,
-                caption: `🔞 NSFW (${picked})`
-            },
-            { quoted: message }
-        );
-
-    } catch (e) {
-        console.error('nsfw error:', e);
-        sock.sendMessage(
-            chatId,
-            { text: '❌ NSFW error / kategori tidak ada' },
+        return sock.sendMessage(chatId,
+            { text: `🔥 NSFW LIST:\n\n${categories.join(', ')}` },
             { quoted: message }
         );
     }
-}
 
-module.exports = nsfwCommand;
+    // =====================
+    // NSFW TANPA ARGUMEN
+    // =====================
+    if (!args.length) {
+        return sock.sendMessage(chatId,
+            { text: '⚠️ Gunakan:\n.nsfw <kategori>\n.nsfwlist' },
+            { quoted: message }
+        );
+    }
+
+    const hasVV = args.includes('--vv');
+    const category = args.find(a => !a.startsWith('--'))?.toLowerCase();
+
+    const categories = getCategories();
+    if (!categories.includes(category)) {
+        return sock.sendMessage(chatId,
+            { text: '❌ Kategori tidak ada\n\n' + categories.join(', ') },
+            { quoted: message }
+        );
+    }
+
+    const url = getRandom(category);
+    if (!url) {
+        return sock.sendMessage(chatId,
+            { text: '❌ File kosong / rusak' },
+            { quoted: message }
+        );
+    }
+
+    // =====================
+    // GIF / WEBP
+    // =====================
+    if (url.endsWith('.gif') || url.endsWith('.webp')) {
+        const tmpDir = path.join(__dirname, '..', 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+        const ext = path.extname(url);
+        const tmpFile = path.join(tmpDir, Date.now() + ext);
+
+        const res = await fetch(url);
+        fs.writeFileSync(tmpFile, Buffer.from(await res.arrayBuffer()));
+
+        const mp4 = await EzGif.WebP2mp4(tmpFile);
+        fs.unlinkSync(tmpFile);
+
+        return sock.sendMessage(chatId, {
+            video: { url: mp4 },
+            gifPlayback: true,
+            viewOnce: hasVV,
+            caption: `🔥 NSFW ${category}`
+        }, { quoted: message });
+    }
+
+    // =====================
+    // IMAGE
+    // =====================
+    return sock.sendMessage(chatId, {
+        image: { url },
+        viewOnce: hasVV,
+        caption: `🔥 NSFW ${category}`
+    }, { quoted: message });
+};
