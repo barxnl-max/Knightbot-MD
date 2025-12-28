@@ -1,82 +1,94 @@
-const { Tiktok } = require("../lib/tiktok");
+const fs = require("fs");
+const path = require("path");
+const axios = require("axios");
+const Tiktok = require("../lib/tiktok");
 
-module.exports = async function tiktokCommand(sock, chatId, message, args) {
+async function tiktokCommand(sock, chatId, message, args, cmd) {
   try {
-    if (!args[0]) {
-      return sock.sendMessage(chatId, {
-        text:
-          "❌ URL TikTok kosong\n\n" +
-          "Contoh:\n" +
-          ".tiktok <url>\n" +
-          ".tiktok <url> --vv\n" +
-          ".tiktokmp3 <url>\n" +
-          ".tiktokall <url>"
-      }, { quoted: message });
-    }
+    const text =
+      message.message?.conversation ||
+      message.message?.extendedTextMessage?.text ||
+      "";
 
-    const isVV = args.includes("--vv");
     const url = args.find(a => a.startsWith("http"));
+    const isViewOnce = args.includes("--vv");
 
-    if (!url || !url.includes("tiktok")) {
-      return sock.sendMessage(chatId, {
-        text: "❌ URL TikTok tidak valid"
-      }, { quoted: message });
+    if (!url) {
+      return sock.sendMessage(
+        chatId,
+        { text: "❌ Masukkan URL TikTok\n\nContoh:\n.tiktok <url>\n.tiktokmp3 <url>" },
+        { quoted: message }
+      );
     }
 
-    await sock.sendMessage(chatId, {
-      react: { text: "⏳", key: message.key }
-    });
+    const data = await Tiktok.download(url);
+    if (!data) throw "DATA_EMPTY";
 
-    const data = await Tiktok(url);
+    const caption = `🎵 TikTok Downloader\n\n👤 ${data.author.nickname}\n📝 ${data.title || "-"}`;
 
-    if (!data.nowm && !data.audio) {
-      return sock.sendMessage(chatId, {
-        text: "❌ Gagal mengambil data TikTok"
-      }, { quoted: message });
+    // ======================
+    // TIKTOK VIDEO
+    // ======================
+    if (cmd === "tiktok") {
+      return sock.sendMessage(
+        chatId,
+        {
+          video: { url: data.play },
+          caption,
+          viewOnce: isViewOnce,
+        },
+        { quoted: message }
+      );
     }
 
-    const caption =
-      `🎵 TikTok Download\n` +
-      (data.title ? `📌 ${data.title}\n` : "") +
-      (data.author ? `👤 ${data.author}` : "");
-
-    // ===== VIDEO =====
-    if (message.message?.conversation?.startsWith(".tiktok")) {
-      return sock.sendMessage(chatId, {
-        video: { url: data.nowm },
-        caption,
-        viewOnce: isVV
-      }, { quoted: message });
+    // ======================
+    // TIKTOK MP3
+    // ======================
+    if (cmd === "tiktokmp3") {
+      return sock.sendMessage(
+        chatId,
+        {
+          audio: { url: data.music },
+          mimetype: "audio/mpeg",
+          ptt: true,
+          viewOnce: isViewOnce,
+        },
+        { quoted: message }
+      );
     }
 
-    // ===== AUDIO / MP3 =====
-    if (message.message?.conversation?.startsWith(".tiktokmp3")) {
-      return sock.sendMessage(chatId, {
-        audio: { url: data.audio },
-        mimetype: "audio/mpeg",
-        ptt: true,
-        viewOnce: isVV
-      }, { quoted: message });
+    // ======================
+    // TIKTOK ALL
+    // ======================
+    if (cmd === "tiktokall") {
+      await sock.sendMessage(
+        chatId,
+        {
+          video: { url: data.play },
+          caption,
+        },
+        { quoted: message }
+      );
+
+      await sock.sendMessage(
+        chatId,
+        {
+          audio: { url: data.music },
+          mimetype: "audio/mpeg",
+          ptt: false,
+        },
+        { quoted: message }
+      );
     }
 
-    // ===== ALL =====
-    if (message.message?.conversation?.startsWith(".tiktokall")) {
-      await sock.sendMessage(chatId, {
-        video: { url: data.nowm },
-        caption
-      }, { quoted: message });
-
-      return sock.sendMessage(chatId, {
-        audio: { url: data.audio },
-        mimetype: "audio/mpeg",
-        ptt: true
-      }, { quoted: message });
-    }
-
-  } catch (err) {
-    console.error("tiktok error:", err);
-    await sock.sendMessage(chatId, {
-      text: "❌ Error TikTok: " + err.message
-    }, { quoted: message });
+  } catch (e) {
+    console.error("tiktok error:", e);
+    await sock.sendMessage(
+      chatId,
+      { text: "❌ Gagal download TikTok (link/private/limit)" },
+      { quoted: message }
+    );
   }
-};
+}
+
+module.exports = tiktokCommand;
