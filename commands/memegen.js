@@ -92,3 +92,4 @@ module.exports = async function memegenCommand(sock, chatId, message, userMessag
         }, { quoted: message })
     }
 }
+// peler
