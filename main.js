@@ -41,7 +41,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
-// const memegenCommand = require('./commands/memegen')
+const memegen = require('./commands/memegen')
 const waifuPicsCommand = require('./commands/waifupics');
 const canvasStickerCommand = require('./commands/canvasSticker')
 const topttCommand = require('./commands/toptt');
@@ -469,13 +469,9 @@ async function handleMessages(sock, messageUpdate, printLog) {
     // ================= EVAL =================
 
         switch (true) {
-            case body.startsWith('.memegen'):
-  await require('./commands/memegen')(
-    sock,
-    chatId,
-    message
-  )
-  break
+            case userMessage.startsWith('.memegen'):
+            await memegen(sock, chatId, message, userMessage)
+            break
             case userMessage.startsWith('.triggered'):
     await canvasStickerCommand(sock, chatId, message)
     break
