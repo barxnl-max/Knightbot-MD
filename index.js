@@ -146,37 +146,6 @@ const context =
 
 const mentioned = context?.mentionedJid || []
 
-// nomor target (ubah 08 → 62)
-const targetNumber = '6285654716030@s.whatsapp.net'
-
-// jid bot
-const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-
-// cek kalau target ATAU bot di tag
-if (
-    isGroup &&
-    (mentioned.includes(targetNumber) || mentioned.includes(botJid))
-) {
-
-    const replies = [
-        'wkwkw dipanggil nih 😆',
-        'eh ada apa sih 🤣',
-        'hadirrrr 😂',
-        'oi jangan tag sembarangan 😜',
-        'aku lagi ngopi wkwkw ☕',
-        'kenapa rame amat 😅'
-    ]
-
-    const reply = replies[Math.floor(Math.random() * replies.length)]
-
-    await sock.sendMessage(
-        from,
-        { text: reply },
-        { quoted: mek }
-    )
-
-    return // ⛔ stop biar ga lanjut ke command
-}
             mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
             if (mek.key && mek.key.remoteJid === 'status@broadcast') {
                 await handleStatus(sock, chatUpdate);
