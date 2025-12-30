@@ -1,4 +1,3 @@
-const { ttdl } = require("ruhend-scraper")
 const axios = require("axios")
 
 const processedMessages = new Set()
@@ -16,10 +15,9 @@ module.exports = async function tiktokCommand(sock, chatId, message) {
     if (!text) return
 
     const args = text.split(" ").slice(1)
-    const isViewOnce = args.includes("--vv")
-    const isMp3 = args.includes("--mp3")
-
     const url = args.find(v => v.startsWith("http"))
+    const isViewOnce = args.includes("--vv")
+
     if (!url) {
       return sock.sendMessage(chatId, {
         text: "❌ Masukkan link TikTok"
@@ -30,39 +28,20 @@ module.exports = async function tiktokCommand(sock, chatId, message) {
       react: { text: "⏳", key: message.key }
     })
 
-    let videoUrl, audioUrl, title = "TikTok Video"
+    const api = await axios.get(
+      `https://api.siputzx.my.id/api/d/tiktok?url=${encodeURIComponent(url)}`,
+      { timeout: 20000 }
+    )
 
-    // ================= SIPUTZX API =================
-    try {
-      const api = await axios.get(
-        `https://api.siputzx.my.id/api/d/tiktok?url=${encodeURIComponent(url)}`,
-        { timeout: 15000 }
-      )
-
-      const data = api.data?.data
-      if (data) {
-        videoUrl = data.urls?.[0] || data.video_url || data.url
-        audioUrl = data.music || null
-        title = data.metadata?.title || title
-      }
-    } catch {}
-
-    // ================= FALLBACK TTDL =================
-    if (!videoUrl) {
-      const res = await ttdl(url)
-      const media = res?.data?.find(v => v.type === "video")
-      if (!media) throw "No video"
-      videoUrl = media.url
+    if (!api.data?.status || !api.data?.data?.urls?.length) {
+      throw "API gagal"
     }
 
-    // ================= DOWNLOAD =================
-    if (isMp3 && audioUrl) {
-      return sock.sendMessage(chatId, {
-        audio: { url: audioUrl },
-        mimetype: "audio/mpeg",
-        ptt: isViewOnce
-      }, { quoted: message })
-    }
+    const data = api.data.data
+    const title = data.metadata?.title || "TikTok Video"
+
+    // ⚠️ PAKAI URL KEDUA (PALING STABIL)
+    const videoUrl = data.urls[1]
 
     await sock.sendMessage(chatId, {
       video: { url: videoUrl },
@@ -72,7 +51,7 @@ module.exports = async function tiktokCommand(sock, chatId, message) {
     }, { quoted: message })
 
   } catch (e) {
-    console.error(e)
+    console.error("TIKTOK ERROR:", e)
     sock.sendMessage(chatId, {
       text: "❌ Gagal download TikTok"
     }, { quoted: message })
