@@ -2,10 +2,14 @@ const { downloadContentFromMessage } = require('@whiskeysockets/baileys')
 const fs = require('fs')
 const path = require('path')
 const axios = require('axios')
+
 const { UploadFileUgu, TelegraPh } = require('../lib/uploader')
 const { writeExifImg } = require('../lib/exif')
 const settings = require('../settings')
 
+/* =========================
+   DOWNLOAD QUOTED IMAGE
+========================= */
 async function downloadQuotedImage(message) {
   const quoted =
     message.message?.extendedTextMessage?.contextInfo?.quotedMessage
@@ -25,6 +29,9 @@ async function downloadQuotedImage(message) {
   return buffer
 }
 
+/* =========================
+   UPLOAD IMAGE → URL
+========================= */
 async function uploadImage(buffer) {
   const tempDir = path.join(__dirname, '../temp')
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
@@ -37,7 +44,9 @@ async function uploadImage(buffer) {
     url = await TelegraPh(tempPath)
   } catch {
     const res = await UploadFileUgu(tempPath)
-    url = typeof res === 'string' ? res : res.url
+    url = typeof res === 'string'
+      ? res
+      : (res.url || res.url_full)
   } finally {
     setTimeout(() => {
       try { fs.unlinkSync(tempPath) } catch {}
@@ -47,8 +56,20 @@ async function uploadImage(buffer) {
   return url
 }
 
-module.exports = async function memegenCommand(sock, chatId, message, userMessage) {
+/* =========================
+   MEMEGEN COMMAND
+========================= */
+module.exports = async function memegenCommand(sock, chatId, message) {
   try {
+    const text =
+      message.message?.conversation ||
+      message.message?.extendedTextMessage?.text ||
+      ''
+
+    // ===== VALIDASI COMMAND =====
+    if (!text.toLowerCase().startsWith('.memegen')) return
+
+    // ===== HARUS REPLY GAMBAR =====
     const quotedImg = await downloadQuotedImage(message)
     if (!quotedImg) {
       return sock.sendMessage(
@@ -58,8 +79,11 @@ module.exports = async function memegenCommand(sock, chatId, message, userMessag
       )
     }
 
-    const isImage = userMessage.includes('--image')
-    const cleanText = userMessage
+    // ===== FLAG =====
+    const isImage = text.includes('--image')
+
+    // ===== PARSE TEXT =====
+    const cleanText = text
       .replace(/^\.memegen/i, '')
       .replace('--image', '')
       .trim()
@@ -69,13 +93,14 @@ module.exports = async function memegenCommand(sock, chatId, message, userMessag
     top = encodeURIComponent(top || '_')
     bottom = encodeURIComponent(bottom || '_')
 
+    // ===== UPLOAD BG =====
     const bgUrl = await uploadImage(quotedImg)
 
     const memeUrl =
       `https://api.memegen.link/images/custom/${top}/${bottom}.png` +
       `?background=${encodeURIComponent(bgUrl)}`
 
-    // ================= IMAGE =================
+    // ================= IMAGE MODE =================
     if (isImage) {
       return await sock.sendMessage(
         chatId,
@@ -87,10 +112,10 @@ module.exports = async function memegenCommand(sock, chatId, message, userMessag
       )
     }
 
-    // ================= STICKER =================
-    const imgBuffer = (await axios.get(memeUrl, {
-      responseType: 'arraybuffer'
-    })).data
+    // ================= STICKER MODE =================
+    const imgBuffer = (
+      await axios.get(memeUrl, { responseType: 'arraybuffer' })
+    ).data
 
     const webpPath = await writeExifImg(imgBuffer, {
       packname: settings.packname,
@@ -106,8 +131,8 @@ module.exports = async function memegenCommand(sock, chatId, message, userMessag
       { quoted: message }
     )
 
-  } catch (e) {
-    console.error('MEMEGEN ERROR:', e)
+  } catch (err) {
+    console.error('MEMEGEN ERROR:', err)
     await sock.sendMessage(
       chatId,
       { text: '❌ Gagal membuat meme' },
