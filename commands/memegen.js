@@ -7,18 +7,22 @@ const { UploadFileUgu, TelegraPh } = require('../lib/uploader')
 const settings = require('../settings')
 
 // =========================
-// DOWNLOAD QUOTED IMAGE (TRIGGERED STYLE)
+// DOWNLOAD QUOTED MEDIA (IMAGE / STICKER)
 // =========================
-async function downloadQuotedImage(message) {
+async function downloadQuotedMedia(message) {
   const ctx = message.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
 
-  if (!quoted || !quoted.imageMessage) return null
+  if (!quoted) return null
 
-  const stream = await downloadContentFromMessage(
-    quoted.imageMessage,
-    'image'
-  )
+  let stream
+  if (quoted.imageMessage) {
+    stream = await downloadContentFromMessage(quoted.imageMessage, 'image')
+  } else if (quoted.stickerMessage) {
+    stream = await downloadContentFromMessage(quoted.stickerMessage, 'sticker')
+  } else {
+    return null
+  }
 
   let buffer = Buffer.from([])
   for await (const chunk of stream) {
@@ -58,17 +62,17 @@ async function uploadImageBuffer(buffer) {
 // =========================
 module.exports = async function memegenCommand(sock, chatId, message, userMessage) {
   try {
-    // ====== WAJIB REPLY GAMBAR ======
-    const imgBuffer = await downloadQuotedImage(message)
-    if (!imgBuffer) {
+    // ====== REPLY IMAGE / STICKER ======
+    const mediaBuffer = await downloadQuotedMedia(message)
+    if (!mediaBuffer) {
       return sock.sendMessage(
         chatId,
-        { text: '⚠️ Reply gambar untuk membuat meme' },
+        { text: '⚠️ Reply gambar atau stiker (non gif)' },
         { quoted: message }
       )
     }
 
-    // ====== PARSE TEXT ======
+    // ====== PARSE ARG ======
     const isImage = userMessage.includes('--image')
 
     const cleanText = userMessage
@@ -78,12 +82,11 @@ module.exports = async function memegenCommand(sock, chatId, message, userMessag
 
     let [top = '', bottom = ''] = cleanText.split('|')
 
-    // memegen API pakai "_" kalau kosong
     top = encodeURIComponent(top || '_')
     bottom = encodeURIComponent(bottom || '_')
 
-    // ====== UPLOAD IMAGE ======
-    const bgUrl = await uploadImageBuffer(imgBuffer)
+    // ====== UPLOAD BG ======
+    const bgUrl = await uploadImageBuffer(mediaBuffer)
 
     // ====== MEMEGEN URL ======
     const memeUrl =
@@ -102,7 +105,7 @@ module.exports = async function memegenCommand(sock, chatId, message, userMessag
       )
     }
 
-    // ================= STICKER MODE =================
+    // ================= STICKER MODE (DEFAULT) =================
     const img = await axios.get(memeUrl, { responseType: 'arraybuffer' })
 
     const webpPath = await writeExifImg(img.data, {
@@ -123,7 +126,7 @@ module.exports = async function memegenCommand(sock, chatId, message, userMessag
     console.error('MEMEGEN ERROR:', err)
     await sock.sendMessage(
       chatId,
-      { text: '❌ Gagal membuat meme' },
+      { text: 'BOT: Ya gimana bang, gagal ini!' },
       { quoted: message }
     )
   }
