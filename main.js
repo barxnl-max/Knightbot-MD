@@ -239,83 +239,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
             message.message?.videoMessage?.caption?.trim() ||
             '';
            
-       /* if (userMessage.startsWith('=>') || userMessage.startsWith('>')) {
-  if (!message.key.fromMe && !senderIsOwnerOrSudo) {
-    await sock.sendMessage(
-      chatId,
-      { text: 'Only owner/sudo can use eval.' },
-      { quoted: message }
-    )
-    return
-  }
-
-  const util = require('util')
-
-  const isArrow = userMessage.startsWith('=>')
-  let code = userMessage.replace(/^=>?/, '').trim()
-
-  if (!code) {
-    await sock.sendMessage(
-      chatId,
-      { text: 'No code to eval.' },
-      { quoted: message }
-    )
-    return
-  }
-
-  // auto return untuk ">"
-  if (!isArrow && !/^return\s+/i.test(code)) {
-    code = 'return ' + code
-  }
-
-  try {
-    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
-
-    const fn = new AsyncFunction(
-      'require',
-      'process',
-      'sock',
-      'message',
-      'chatId',
-      `
-      try {
-        ${code}
-      } catch (e) {
-        return e
-      }
-      `
-    )
-
-    let result = await fn(
-      (p) => require(p.startsWith('.') ? process.cwd() + '/' + p : p),
-      process,
-      sock,
-      message,
-      chatId
-    )
-
-    if (typeof result !== 'string') {
-      result = util.inspect(result, {
-        depth: 3,
-        maxArrayLength: 20
-      })
-    }
-
-    await sock.sendMessage(
-      chatId,
-      { text: String(result).slice(0, 4000) },
-      { quoted: message }
-    )
-  } catch (err) {
-    await sock.sendMessage(
-      chatId,
-      { text: util.inspect(err) },
-      { quoted: message }
-    )
-  }
-
-  return
-        } */
+       
         if (userMessage.startsWith('=>') || userMessage.startsWith('>')) {
   if (!message.key.fromMe && !senderIsOwnerOrSudo) {
     await sock.sendMessage(
@@ -1195,23 +1119,10 @@ break;
             case userMessage.startsWith('.video') || userMessage.startsWith('.ytmp4'):
                 await videoCommand(sock, chatId, message);
                 break;
-case userMessage.startsWith(".tiktokmp3"): {
-  const args = userMessage.split(" ").slice(1);
-  await tiktokCommand(sock, chatId, message, args, "tiktokmp3");
-}
-break;
-
-case userMessage.startsWith(".tiktokall"): {
-  const args = userMessage.split(" ").slice(1);
-  await tiktokCommand(sock, chatId, message, args, "tiktokall");
-}
-break;
-
-case userMessage.startsWith(".tiktok"): {
-  const args = userMessage.split(" ").slice(1);
-  await tiktokCommand(sock, chatId, message, args, "tiktok");
-}
-break;
+            case userMessage.startsWith(".tiktok"):
+            case userMessage.startsWith(".tt"):
+            await tiktokCommand(sock, chatId, message)
+            break
             case userMessage.startsWith('.gpt') || userMessage.startsWith('.gemini'):
                 await aiCommand(sock, chatId, message);
                 break;
