@@ -41,6 +41,7 @@ const { autotypingCommand, isAutotypingEnabled, handleAutotypingForMessage, hand
 const { autoreadCommand, isAutoreadEnabled, handleAutoread } = require('./commands/autoread');
 
 // Command imports
+const memegenCommand = require('./commands/memegen')
 const waifuPicsCommand = require('./commands/waifupics');
 const canvasStickerCommand = require('./commands/canvasSticker')
 const topttCommand = require('./commands/toptt');
@@ -453,53 +454,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 }
             }
         }
-      /*  if (userMessage.startsWith('=>') || userMessage.startsWith('>')) {
-  if (!message.key.fromMe && !senderIsOwnerOrSudo) {
-    await sock.sendMessage(
-      chatId,
-      { text: 'Only owner/sudo can use eval.' },
-      { quoted: message }
-    )
-    return
-  }
-
-  const util = require('util')
-  const isArrow = userMessage.startsWith('=>')
-
-  const code = isArrow
-    ? userMessage.slice(2).trim()
-    : userMessage.slice(1).trim()
-
-  if (!code) {
-    await sock.sendMessage(chatId, { text: 'No code.' }, { quoted: message })
-    return
-  }
-
-  try {
-    let result = await eval(`
-      (async () => {
-        ${isArrow ? code : 'return ' + code}
-      })()
-    `)
-
-    if (typeof result !== 'string') {
-      result = util.inspect(result, { depth: 2 })
-    }
-
-    await sock.sendMessage(
-      chatId,
-      { text: String(result).slice(0, 4000) },
-      { quoted: message }
-    )
-  } catch (e) {
-    await sock.sendMessage(
-      chatId,
-      { text: String(e) },
-      { quoted: message }
-    )
-  }
-  return
-        } */
+      
         // Check owner status for owner commands
         if (isOwnerCommand) {
             if (!message.key.fromMe && !senderIsOwnerOrSudo) {
@@ -514,6 +469,9 @@ async function handleMessages(sock, messageUpdate, printLog) {
     // ================= EVAL =================
 
         switch (true) {
+            case 'memegen': 
+            await memegenCommand(sock, chatId, message, body)
+            break
             case userMessage.startsWith('.triggered'):
     await canvasStickerCommand(sock, chatId, message)
     break
