@@ -2,17 +2,16 @@ const { downloadContentFromMessage } = require('@whiskeysockets/baileys')
 const fs = require('fs')
 const path = require('path')
 const axios = require('axios')
-
-const { UploadFileUgu, TelegraPh } = require('../lib/uploader')
 const { writeExifImg } = require('../lib/exif')
+const { UploadFileUgu, TelegraPh } = require('../lib/uploader')
 const settings = require('../settings')
 
-/* =========================
-   DOWNLOAD QUOTED IMAGE
-========================= */
+// =========================
+// DOWNLOAD QUOTED IMAGE (TRIGGERED STYLE)
+// =========================
 async function downloadQuotedImage(message) {
-  const quoted =
-    message.message?.extendedTextMessage?.contextInfo?.quotedMessage
+  const ctx = message.message?.extendedTextMessage?.contextInfo
+  const quoted = ctx?.quotedMessage
 
   if (!quoted || !quoted.imageMessage) return null
 
@@ -29,10 +28,10 @@ async function downloadQuotedImage(message) {
   return buffer
 }
 
-/* =========================
-   UPLOAD IMAGE → URL
-========================= */
-async function uploadImage(buffer) {
+// =========================
+// UPLOAD BUFFER → URL
+// =========================
+async function uploadImageBuffer(buffer) {
   const tempDir = path.join(__dirname, '../temp')
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
 
@@ -44,9 +43,7 @@ async function uploadImage(buffer) {
     url = await TelegraPh(tempPath)
   } catch {
     const res = await UploadFileUgu(tempPath)
-    url = typeof res === 'string'
-      ? res
-      : (res.url || res.url_full)
+    url = typeof res === 'string' ? res : res.url
   } finally {
     setTimeout(() => {
       try { fs.unlinkSync(tempPath) } catch {}
@@ -56,22 +53,14 @@ async function uploadImage(buffer) {
   return url
 }
 
-/* =========================
-   MEMEGEN COMMAND
-========================= */
-module.exports = async function memegenCommand(sock, chatId, message) {
+// =========================
+// MAIN COMMAND
+// =========================
+module.exports = async function memegenCommand(sock, chatId, message, userMessage) {
   try {
-    const text =
-      message.message?.conversation ||
-      message.message?.extendedTextMessage?.text ||
-      ''
-
-    // ===== VALIDASI COMMAND =====
-    if (!text.toLowerCase().startsWith('.memegen')) return
-
-    // ===== HARUS REPLY GAMBAR =====
-    const quotedImg = await downloadQuotedImage(message)
-    if (!quotedImg) {
+    // ====== WAJIB REPLY GAMBAR ======
+    const imgBuffer = await downloadQuotedImage(message)
+    if (!imgBuffer) {
       return sock.sendMessage(
         chatId,
         { text: '⚠️ Reply gambar untuk membuat meme' },
@@ -79,23 +68,24 @@ module.exports = async function memegenCommand(sock, chatId, message) {
       )
     }
 
-    // ===== FLAG =====
-    const isImage = text.includes('--image')
+    // ====== PARSE TEXT ======
+    const isImage = userMessage.includes('--image')
 
-    // ===== PARSE TEXT =====
-    const cleanText = text
+    const cleanText = userMessage
       .replace(/^\.memegen/i, '')
       .replace('--image', '')
       .trim()
 
     let [top = '', bottom = ''] = cleanText.split('|')
 
+    // memegen API pakai "_" kalau kosong
     top = encodeURIComponent(top || '_')
     bottom = encodeURIComponent(bottom || '_')
 
-    // ===== UPLOAD BG =====
-    const bgUrl = await uploadImage(quotedImg)
+    // ====== UPLOAD IMAGE ======
+    const bgUrl = await uploadImageBuffer(imgBuffer)
 
+    // ====== MEMEGEN URL ======
     const memeUrl =
       `https://api.memegen.link/images/custom/${top}/${bottom}.png` +
       `?background=${encodeURIComponent(bgUrl)}`
@@ -113,11 +103,9 @@ module.exports = async function memegenCommand(sock, chatId, message) {
     }
 
     // ================= STICKER MODE =================
-    const imgBuffer = (
-      await axios.get(memeUrl, { responseType: 'arraybuffer' })
-    ).data
+    const img = await axios.get(memeUrl, { responseType: 'arraybuffer' })
 
-    const webpPath = await writeExifImg(imgBuffer, {
+    const webpPath = await writeExifImg(img.data, {
       packname: settings.packname,
       author: settings.author
     })
