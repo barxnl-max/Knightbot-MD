@@ -10,7 +10,7 @@ async function helpCommand(sock, chatId, message) {
     const isAll = args[0]?.toLowerCase() === 'all'
 
     const helpMessage = `
-Saya adalah *Catahstroph* 🤖
+Saya adalah *WhatsApp Bot* 🤖
 Dibuat untuk membantu berbagai aktivitas harian Anda, mulai dari kebutuhan praktis hingga hiburan.
 
 Saya dapat membantu Anda untuk:
@@ -32,7 +32,7 @@ dengan fokus pada *performa*, *stabilitas*, dan *kemudahan penggunaan*.
 • .getxvideo <nomor> → Download video Xvideos
 • .tiktok <url > → Download TikTok tanpa watermark
 • .waifu (opsional) → Tampilkan gambar animeh
-• .waifunsfw (opsional) → Tampilkan gambar xxx
+• .waifunsfw (opsional) → Tampilkan gambar animeh telanjang
 • .menu all → Tampilkan seluruh fitur bot
 
 Silakan gunakan perintah dengan bijak ✨
