@@ -217,7 +217,7 @@ Silakan gunakan perintah dengan bijak ✨
                         mediaType: 1,
                         previewType: 0,
                         renderLargerThumbnail: true,
-                        thumbnailUrl: 'https://ibb.co.com/ZzvQDC63'
+                        thumbnailUrl: 'https://i.ibb.co.com/Jj8YJPRN/3aaa806df7ed8d95e652858749b37d7e.jpg'
                         // sourceUrl sengaja dihilangkan
                     }
                 },
