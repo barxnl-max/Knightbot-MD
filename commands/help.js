@@ -10,9 +10,7 @@ async function helpCommand(sock, chatId, message) {
     const isAll = args[0]?.toLowerCase() === 'all'
 
     const helpMessage = `
-HALO 👋
-
-Saya adalah *WhatsApp Bot otomatis* 🤖
+Saya adalah *Catahstroph* 🤖
 Dibuat untuk membantu berbagai aktivitas harian Anda, mulai dari kebutuhan praktis hingga hiburan.
 
 Saya dapat membantu Anda untuk:
@@ -24,7 +22,7 @@ Saya dapat membantu Anda untuk:
 Bot ini dibangun menggunakan *TypeScript*,
 dengan fokus pada *performa*, *stabilitas*, dan *kemudahan penggunaan*.
 
-✨ *Fitur Andalan Bot*:
+✨ *Fitur Andalan*:
 • .sticker → Reply gambar / video ke stiker
 • .qc <text> → Quote chat jadi stiker
 • .play <query> → Cari & download lagu
@@ -215,11 +213,11 @@ Silakan gunakan perintah dengan bijak ✨
                 contextInfo: {
                     mentionedJid: [sender],
                     externalAdReply: {
-                        title: 'Catashtroph Assistant',
+                        title: 'Cata La Li Lo? Catashtroph Assistant',
                         mediaType: 1,
                         previewType: 0,
                         renderLargerThumbnail: true,
-                        thumbnailUrl: 'https://d.uguu.se/cQQSKWuf.jpg'
+                        thumbnailUrl: 'https://ibb.co.com/ZzvQDC63'
                         // sourceUrl sengaja dihilangkan
                     }
                 },
