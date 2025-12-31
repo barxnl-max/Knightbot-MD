@@ -3,71 +3,53 @@ const fs = require('fs')
 const { writeExifImg } = require('../lib/exif')
 const settings = require('../settings')
 
+// =========================
+// WARNA QC
+// =========================
 const COLORS = {
   white: '#ffffff',
   black: '#000000',
   red: '#f44336',
-  blue: '#2196f3',
+  blue: '#6cace4',
   green: '#4caf50',
   yellow: '#ffeb3b',
   purple: '#9c27b0',
   pink: '#f68ac9',
   orange: '#ff9800',
-  cyan: '#48D1CC'
+  teal: '#008080',
+  magenta: '#ff00ff',
+  gold: '#ffd700',
+  silver: '#c0c0c0'
 }
 
+// =========================
+// MAIN QC COMMAND
+// =========================
 module.exports = async function qcCommand(sock, chatId, message, userMessage) {
   try {
     const ctx = message.message?.extendedTextMessage?.contextInfo
-    const quotedMsg = ctx?.quotedMessage
 
-    const args = userMessage.replace(/^\.qc/i, '').trim().split(' ')
-
-    // ================= COLOR =================
-    let backgroundColor = COLORS.white
-    if (COLORS[args[0]?.toLowerCase()]) {
-      backgroundColor = COLORS[args.shift().toLowerCase()]
-    }
-
-    // ================= TEXT =================
-    let text = ''
-    if (quotedMsg) {
-      text =
-        quotedMsg.conversation ||
-        quotedMsg.extendedTextMessage?.text ||
-        ''
-    } else {
-      text = args.join(' ')
-    }
-
-    if (!text) {
-      return sock.sendMessage(
-        chatId,
-        { text: '⚠️ Masukkan teks atau reply chat' },
-        { quoted: message }
-      )
-    }
-
-    if (text.length > 80) {
-      return sock.sendMessage(
-        chatId,
-        { text: '⚠️ Maksimal 80 karakter' },
-        { quoted: message }
-      )
-    }
-
-    // ================= TARGET USER =================
+    // =========================
+    // TARGET (reply > self)
+    // =========================
     const targetJid =
       ctx?.participant ||
       message.key.participant ||
       message.key.remoteJid
 
-    const targetName =
-      quotedMsg
-        ? (ctx?.pushName || 'User')
-        : (message.pushName || 'User')
+    // =========================
+    // AMBIL NAMA TARGET
+    // =========================
+    let targetName
+    try {
+      targetName = await sock.getName(targetJid)
+    } catch {
+      targetName = 'User'
+    }
 
-    // ================= AVATAR =================
+    // =========================
+    // AMBIL FOTO PROFIL TARGET
+    // =========================
     let avatar
     try {
       avatar = await sock.profilePictureUrl(targetJid, 'image')
@@ -75,7 +57,50 @@ module.exports = async function qcCommand(sock, chatId, message, userMessage) {
       avatar = 'https://files.catbox.moe/nwvkbt.png'
     }
 
-    // ================= PAYLOAD =================
+    // =========================
+    // AMBIL TEKS
+    // =========================
+    let text = ''
+
+    if (ctx?.quotedMessage?.conversation) {
+      text = ctx.quotedMessage.conversation
+    } else {
+      text = userMessage
+        .replace(/^\.qc/i, '')
+        .trim()
+    }
+
+    if (!text) {
+      return sock.sendMessage(
+        chatId,
+        { text: '❌ Tidak ada teks' },
+        { quoted: message }
+      )
+    }
+
+    if (text.length > 80) {
+      return sock.sendMessage(
+        chatId,
+        { text: '❌ Maksimal 80 karakter' },
+        { quoted: message }
+      )
+    }
+
+    // =========================
+    // PARSE WARNA (DEFAULT PUTIH)
+    // =========================
+    let color = 'white'
+    const split = text.split(' ')
+    if (COLORS[split[0].toLowerCase()]) {
+      color = split.shift().toLowerCase()
+      text = split.join(' ')
+    }
+
+    const backgroundColor = COLORS[color]
+
+    // =========================
+    // PAYLOAD QC
+    // =========================
     const payload = {
       type: 'quote',
       format: 'png',
@@ -83,30 +108,36 @@ module.exports = async function qcCommand(sock, chatId, message, userMessage) {
       width: 512,
       height: 768,
       scale: 2,
-      messages: [{
-        entities: [],
-        avatar: true,
-        from: {
-          id: 1,
-          name: targetName,
-          photo: { url: avatar }
-        },
-        text,
-        replyMessage: {}
-      }]
+      messages: [
+        {
+          entities: [],
+          avatar: true,
+          from: {
+            id: 1,
+            name: targetName,
+            photo: { url: avatar }
+          },
+          text,
+          replyMessage: {}
+        }
+      ]
     }
 
-    // ================= API =================
+    // =========================
+    // REQUEST QC API
+    // =========================
     const res = await axios.post(
       'https://bot.lyo.su/quote/generate',
       payload,
       { headers: { 'Content-Type': 'application/json' } }
     )
 
-    const buffer = Buffer.from(res.data.result.image, 'base64')
+    const imgBuffer = Buffer.from(res.data.result.image, 'base64')
 
-    // ================= STICKER =================
-    const webpPath = await writeExifImg(buffer, {
+    // =========================
+    // CONVERT KE STICKER
+    // =========================
+    const webpPath = await writeExifImg(imgBuffer, {
       packname: settings.packname,
       author: settings.author
     })
