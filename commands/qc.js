@@ -20,17 +20,26 @@ const COLOR_MAP = {
   silver: '#C0C0C0'
 }
 
-module.exports = async function qcCommand(sock, chatId, m, args) {
+module.exports = async function qcCommand(sock, chatId, m, userMessage) {
   try {
     const ctx = m.message?.extendedTextMessage?.contextInfo
     const quoted = ctx?.quotedMessage
     const quotedSender = ctx?.participant
 
+    // =====================
+    // PARSE INPUT
+    // =====================
+    const input = userMessage.replace(/^\.qc/i, '').trim()
+    const parts = input.split(' ')
+
+    const colorInput = parts[0]?.toLowerCase()
+    const backgroundColor = COLOR_MAP[colorInput] || COLOR_MAP.white
+
     let text
     let targetJid
 
     // =====================
-    // AMBIL TEKS & TARGET
+    // REPLY MODE
     // =====================
     if (quoted) {
       text =
@@ -38,7 +47,7 @@ module.exports = async function qcCommand(sock, chatId, m, args) {
         quoted.extendedTextMessage?.text
       targetJid = quotedSender
     } else {
-      text = args.slice(1).join(' ')
+      text = parts.slice(1).join(' ')
       targetJid = m.key.participant || m.key.remoteJid
     }
 
@@ -57,15 +66,9 @@ module.exports = async function qcCommand(sock, chatId, m, args) {
       )
 
     // =====================
-    // WARNA (DEFAULT PUTIH)
+    // USERNAME & AVATAR
     // =====================
-    const colorInput = (args[0] || '').toLowerCase()
-    const backgroundColor = COLOR_MAP[colorInput] || COLOR_MAP.white
-
-    // =====================
-    // NAMA & FOTO PROFIL
-    // =====================
-    let username = 'Unknown'
+    let username = 'User'
     try {
       const contact = await sock.getContact(targetJid)
       username = contact?.notify || contact?.name || username
@@ -85,23 +88,18 @@ module.exports = async function qcCommand(sock, chatId, m, args) {
       width: 512,
       height: 768,
       scale: 2,
-      messages: [
-        {
-          avatar: true,
-          from: {
-            id: 1,
-            name: username,
-            photo: { url: avatar }
-          },
-          text,
-          replyMessage: {}
-        }
-      ]
+      messages: [{
+        avatar: true,
+        from: {
+          id: 1,
+          name: username,
+          photo: { url: avatar }
+        },
+        text,
+        replyMessage: {}
+      }]
     }
 
-    // =====================
-    // GENERATE QC
-    // =====================
     const res = await axios.post(
       'https://bot.lyo.su/quote/generate',
       payload,
@@ -110,17 +108,14 @@ module.exports = async function qcCommand(sock, chatId, m, args) {
 
     const buffer = Buffer.from(res.data.result.image, 'base64')
 
-    // =====================
-    // SEND STICKER
-    // =====================
     await sock.sendMessage(
       chatId,
       { sticker: buffer },
       { quoted: m }
     )
 
-  } catch (err) {
-    console.error('QC ERROR:', err)
+  } catch (e) {
+    console.error('QC ERROR:', e)
     await sock.sendMessage(
       chatId,
       { text: '❌ Gagal membuat QC' },
