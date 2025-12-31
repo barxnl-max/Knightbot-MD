@@ -1,9 +1,6 @@
 const axios = require('axios')
-const fs = require('fs')
-const { writeExifImg } = require('../lib/exif')
-const settings = require('../settings')
 
-const COLORS = {
+const COLOR_MAP = {
   pink: '#f68ac9',
   blue: '#6cace4',
   red: '#f44336',
@@ -17,67 +14,70 @@ const COLORS = {
   black: '#000000',
   white: '#ffffff',
   teal: '#008080',
-  magenta: '#ff00ff',
-  gold: '#ffd700',
-  silver: '#c0c0c0'
+  cyan: '#48D1CC',
+  violet: '#BA55D3',
+  gold: '#FFD700',
+  silver: '#C0C0C0'
 }
 
-module.exports = async function qcCommand(sock, chatId, message, userMessage) {
+module.exports = async function qcCommand(sock, chatId, m, args) {
   try {
-    const args = userMessage.trim().split(' ').slice(1)
-    if (!args[0]) {
-      return sock.sendMessage(
-        chatId,
-        { text: 'Contoh: .qc white halo dunia' },
-        { quoted: message }
-      )
-    }
+    const ctx = m.message?.extendedTextMessage?.contextInfo
+    const quoted = ctx?.quotedMessage
+    const quotedSender = ctx?.participant
 
-    const color = args.shift().toLowerCase()
-    const backgroundColor = COLORS[color]
-    if (!backgroundColor) {
-      return sock.sendMessage(
-        chatId,
-        { text: '❌ Warna tidak ditemukan' },
-        { quoted: message }
-      )
-    }
-
-    // ====== AMBIL TEKS ======
     let text
-    const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage
+    let targetJid
 
-    if (quoted?.conversation) {
-      text = quoted.conversation
+    // =====================
+    // AMBIL TEKS & TARGET
+    // =====================
+    if (quoted) {
+      text =
+        quoted.conversation ||
+        quoted.extendedTextMessage?.text
+      targetJid = quotedSender
     } else {
-      text = args.join(' ')
+      text = args.slice(1).join(' ')
+      targetJid = m.key.participant || m.key.remoteJid
     }
 
-    if (!text) {
+    if (!text)
       return sock.sendMessage(
         chatId,
-        { text: '❌ Tidak ada teks' },
-        { quoted: message }
+        { text: '⚠️ Masukkan teks atau reply chat' },
+        { quoted: m }
       )
-    }
 
-    if (text.length > 80) {
+    if (text.length > 80)
       return sock.sendMessage(
         chatId,
-        { text: '❌ Maksimal 80 karakter' },
-        { quoted: message }
+        { text: '⚠️ Maksimal 80 karakter' },
+        { quoted: m }
       )
-    }
 
-    // ====== AVATAR ======
-    let avatar
+    // =====================
+    // WARNA (DEFAULT PUTIH)
+    // =====================
+    const colorInput = (args[0] || '').toLowerCase()
+    const backgroundColor = COLOR_MAP[colorInput] || COLOR_MAP.white
+
+    // =====================
+    // NAMA & FOTO PROFIL
+    // =====================
+    let username = 'Unknown'
     try {
-      avatar = await sock.profilePictureUrl(message.key.participant || message.key.remoteJid, 'image')
-    } catch {
-      avatar = 'https://files.catbox.moe/nwvkbt.png'
-    }
+      const contact = await sock.getContact(targetJid)
+      username = contact?.notify || contact?.name || username
+    } catch {}
 
-    // ====== PAYLOAD QC ======
+    const avatar = await sock
+      .profilePictureUrl(targetJid, 'image')
+      .catch(() => 'https://files.catbox.moe/nwvkbt.png')
+
+    // =====================
+    // QC PAYLOAD
+    // =====================
     const payload = {
       type: 'quote',
       format: 'png',
@@ -87,11 +87,10 @@ module.exports = async function qcCommand(sock, chatId, message, userMessage) {
       scale: 2,
       messages: [
         {
-          entities: [],
           avatar: true,
           from: {
             id: 1,
-            name: message.pushName || 'User',
+            name: username,
             photo: { url: avatar }
           },
           text,
@@ -100,36 +99,32 @@ module.exports = async function qcCommand(sock, chatId, message, userMessage) {
       ]
     }
 
-    // ====== REQUEST ======
+    // =====================
+    // GENERATE QC
+    // =====================
     const res = await axios.post(
       'https://bot.lyo.su/quote/generate',
       payload,
       { headers: { 'Content-Type': 'application/json' } }
     )
 
-    const imgBuffer = Buffer.from(res.data.result.image, 'base64')
+    const buffer = Buffer.from(res.data.result.image, 'base64')
 
-    // ====== CONVERT KE STIKER ======
-    const webpPath = await writeExifImg(imgBuffer, {
-      packname: settings.packname,
-      author: settings.author
-    })
-
-    const sticker = fs.readFileSync(webpPath)
-    fs.unlinkSync(webpPath)
-
+    // =====================
+    // SEND STICKER
+    // =====================
     await sock.sendMessage(
       chatId,
-      { sticker },
-      { quoted: message }
+      { sticker: buffer },
+      { quoted: m }
     )
 
   } catch (err) {
     console.error('QC ERROR:', err)
     await sock.sendMessage(
       chatId,
-      { text: '❌ Gagal membuat QC sticker' },
-      { quoted: message }
+      { text: '❌ Gagal membuat QC' },
+      { quoted: m }
     )
   }
 }
