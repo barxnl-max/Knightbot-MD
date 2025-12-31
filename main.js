@@ -474,7 +474,7 @@ case userMessage.startsWith('.qcstc'):
 case userMessage.startsWith('.stcqc'):
 case userMessage.startsWith('.qcstick'): {
   const qc = require('./commands/qc')
-  await qc(sock, chatId, message, userMessage)
+  await qc(sock, chatId, message, args)
   break
 }
             case userMessage.startsWith('.memegen'):
