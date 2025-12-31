@@ -560,7 +560,9 @@ break;
                 }
                 await unbanCommand(sock, chatId, message);
                 break;
-            case userMessage === '.help' || userMessage === '.menu' || userMessage === '.bot' || userMessage === '.list':
+            case userMessage.startsWith('.help'):
+            case userMessage.startsWith('.menu'):
+            case userMessage.startsWith('.list'):
                 await helpCommand(sock, chatId, message);
                 commandExecuted = true;
                 break;
