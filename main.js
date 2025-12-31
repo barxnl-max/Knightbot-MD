@@ -469,6 +469,14 @@ async function handleMessages(sock, messageUpdate, printLog) {
     // ================= EVAL =================
 
         switch (true) {
+            case userMessage.startsWith('.qc'):
+case userMessage.startsWith('.qcstc'):
+case userMessage.startsWith('.stcqc'):
+case userMessage.startsWith('.qcstick'): {
+  const qc = require('./commands/qc')
+  await qc(sock, chatId, message, userMessage)
+  break
+}
             case userMessage.startsWith('.memegen'):
             await memegen(sock, chatId, message, userMessage)
             break
