@@ -1,5 +1,5 @@
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys')
-const { Canvas } = require('canvacord')
+const Canvacord = require('canvacord')
 const fs = require('fs')
 const { writeExifImg } = require('../lib/exif')
 const settings = require('../settings')
@@ -35,14 +35,12 @@ async function canvasStickerCommand(sock, chatId, message) {
         // =========================
         // FAST TRIGGERED (STATIC PNG)
         // =========================
-        const canvas = new Canvas(512, 512)
-            .setImage(buffer)
-            .triggered({
-                intensity: 15,   // getar
-                text: true       // tulisan TRIGGERED
-            })
-
-        const result = canvas.toBuffer() // PNG, bukan GIF
+        // ❌ BUKAN GIF
+        // ✅ JAUH LEBIH CEPAT
+        const result = await Canvacord.trigger(buffer, {
+            frames: 1,
+            size: 512
+        })
 
         // =========================
         // CONVERT TO STICKER
