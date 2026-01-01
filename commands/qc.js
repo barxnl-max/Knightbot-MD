@@ -138,7 +138,7 @@ module.exports = async function qcCommand(sock, chatId, message, userMessage) {
     // CONVERT KE STICKER
     // =========================
     const webpPath = await writeExifImg(imgBuffer, {
-      packname: settings.packname,
+      packname: targetName,
       author: settings.author
     })
 
