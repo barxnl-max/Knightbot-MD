@@ -1,50 +1,4 @@
-async function helpCommand(sock, chatId, message) {
-    const sender = message.key.participant || message.key.remoteJid
-
-    const text = `HALO 👋
-Saya adalah WhatsApp Bot otomatis 🤖
-
-Gunakan tombol di bawah untuk navigasi menu.
-`
-
-    await sock.sendMessage(chatId, {
-        text,
-        footer: 'NightBot • Powered by TypeScript',
-        buttons: [
-            {
-                buttonId: '.menu',
-                buttonText: { displayText: '📂 Menu' },
-                type: 1
-            },
-            {
-                buttonId: '.menu all',
-                buttonText: { displayText: '📑 Menu All' },
-                type: 1
-            },
-            {
-                buttonId: '.owner',
-                buttonText: { displayText: '👑 Owner' },
-                type: 1
-            }
-        ],
-        headerType: 1,
-        contextInfo: {
-            mentionedJid: [sender],
-            externalAdReply: {
-                title: 'NightBot',
-                body: 'WhatsApp Automation Bot',
-                mediaType: 1,
-                previewType: 0,
-                renderLargerThumbnail: true,
-                thumbnailUrl: 'https://files.catbox.moe/nwvkbt.png'
-            }
-        }
-    }, { quoted: message })
-}
-
-module.exports = helpCommand
-    
-/* async function helpCommand(sock, chatId, message) {
+ async function helpCommand(sock, chatId, message) {
     const sender = message.key.participant || message.key.remoteJid
 
     const text =
@@ -277,4 +231,4 @@ Silakan gunakan perintah dengan bijak ✨
     }
 }
 
-module.exports = helpCommand */
+module.exports = helpCommand 
