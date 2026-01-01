@@ -1,5 +1,5 @@
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys')
-const Canvacord = require('canvacord')
+const { Canvas } = require('canvacord')
 const fs = require('fs')
 const { writeExifImg } = require('../lib/exif')
 const settings = require('../settings')
@@ -12,7 +12,7 @@ async function canvasStickerCommand(sock, chatId, message) {
         if (!quoted || (!quoted.imageMessage && !quoted.stickerMessage)) {
             return sock.sendMessage(
                 chatId,
-                { text: '⚠️ Reply foto atau stiker(non gif)' },
+                { text: '⚠️ Reply foto atau stiker (non GIF)' },
                 { quoted: message }
             )
         }
@@ -20,27 +20,32 @@ async function canvasStickerCommand(sock, chatId, message) {
         // =========================
         // DOWNLOAD MEDIA
         // =========================
-        let buffer
         let stream
-
         if (quoted.imageMessage) {
             stream = await downloadContentFromMessage(quoted.imageMessage, 'image')
-        } else if (quoted.stickerMessage) {
+        } else {
             stream = await downloadContentFromMessage(quoted.stickerMessage, 'sticker')
         }
 
-        buffer = Buffer.from([])
+        let buffer = Buffer.alloc(0)
         for await (const chunk of stream) {
             buffer = Buffer.concat([buffer, chunk])
         }
 
         // =========================
-        // CANVACORD EFFECT
+        // FAST TRIGGERED (STATIC PNG)
         // =========================
-        const result = await Canvacord.Canvas.trigger(buffer)
+        const canvas = new Canvas(512, 512)
+            .setImage(buffer)
+            .triggered({
+                intensity: 15,   // getar
+                text: true       // tulisan TRIGGERED
+            })
+
+        const result = canvas.toBuffer() // PNG, bukan GIF
 
         // =========================
-        // CONVERT TO STICKER + WM
+        // CONVERT TO STICKER
         // =========================
         const webpPath = await writeExifImg(result, {
             packname: settings.packname,
@@ -50,9 +55,6 @@ async function canvasStickerCommand(sock, chatId, message) {
         const sticker = fs.readFileSync(webpPath)
         fs.unlinkSync(webpPath)
 
-        // =========================
-        // SEND
-        // =========================
         await sock.sendMessage(
             chatId,
             { sticker },
@@ -60,7 +62,7 @@ async function canvasStickerCommand(sock, chatId, message) {
         )
 
     } catch (err) {
-        console.error('triggered error:', err)
+        console.error('TRIGGERED ERROR:', err)
         await sock.sendMessage(
             chatId,
             { text: '❌ Gagal bikin stiker triggered' },
