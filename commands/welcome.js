@@ -1,16 +1,11 @@
 const { handleWelcome } = require('../lib/welcome')
 const { isWelcomeOn, getWelcome } = require('../lib/index')
-const fetch = require('node-fetch')
 
-// =====================
-// COMMAND SET WELCOME
-// =====================
+const DEFAULT_PP = 'https://files.catbox.moe/nwvkbt.png'
+
 async function welcomeCommand(sock, chatId, message) {
     if (!chatId.endsWith('@g.us')) {
-        await sock.sendMessage(chatId, {
-            text: 'This command can only be used in groups.'
-        })
-        return
+        return sock.sendMessage(chatId, { text: 'This command can only be used in groups.' })
     }
 
     const text =
@@ -22,69 +17,70 @@ async function welcomeCommand(sock, chatId, message) {
     await handleWelcome(sock, chatId, message, matchText)
 }
 
-// =====================
-// HANDLE MEMBER JOIN
-// =====================
 async function handleJoinEvent(sock, groupId, participants) {
-    const isEnabled = await isWelcomeOn(groupId)
-    if (!isEnabled) return
+    const enabled = await isWelcomeOn(groupId)
+    if (!enabled) return
 
     const customWelcome = await getWelcome(groupId)
-    const groupMetadata = await sock.groupMetadata(groupId)
+    const metadata = await sock.groupMetadata(groupId)
 
-    const groupName = groupMetadata.subject
-    const groupDesc = groupMetadata.desc || 'No description available'
+    const groupName = metadata.subject
+    const groupDesc = metadata.desc || 'No description available'
 
-    for (const participant of participants) {
-        const jid =
-            typeof participant === 'string'
-                ? participant
-                : participant.id || participant.toString()
-
-        const userNumber = jid.split('@')[0]
-
-        // ===== GET DISPLAY NAME =====
-        let displayName = userNumber
+    for (const p of participants) {
         try {
-            displayName = await sock.getName(jid)
-        } catch {}
+            const jid = typeof p === 'string' ? p : p.id
+            const mentionName = jid.split('@')[0]
 
-        // ===== BUILD MESSAGE =====
-        let caption
-        if (customWelcome) {
-            caption = customWelcome
-                .replace(/{user}/g, `@${displayName}`)
-                .replace(/{group}/g, groupName)
-                .replace(/{description}/g, groupDesc)
-        } else {
-            caption =
-`👋 Welcome @${displayName}
+            // =========================
+            // BUILD MESSAGE
+            // =========================
+            let caption
+            if (customWelcome) {
+                caption = customWelcome
+                    .replace(/{user}/g, `@${mentionName}`)
+                    .replace(/{group}/g, groupName)
+                    .replace(/{description}/g, groupDesc)
+            } else {
+                caption =
+`👋 Welcome @${mentionName}
 
 Selamat datang di *${groupName}*
-Semoga betah dan patuhi rules grup ya.
+Semoga betah dan patuhi rules ya 🤝
 
+📌 *Deskripsi Grup*
 ${groupDesc}`
-        }
+            }
 
-        // ===== GET PROFILE PICTURE =====
-        let imageBuffer
-        try {
-            const ppUrl = await sock.profilePictureUrl(jid, 'image')
-            const res = await fetch(ppUrl)
-            imageBuffer = await res.buffer()
-        } catch {
-            // fallback jika PP private / tidak ada
-            const fallback = 'https://img.pyrocdn.com/dbKUgahg.png'
-            const res = await fetch(fallback)
-            imageBuffer = await res.buffer()
-        }
+            // =========================
+            // GET PROFILE PICTURE
+            // =========================
+            let ppUrl = DEFAULT_PP
+            try {
+                const url = await sock.profilePictureUrl(jid, 'image')
+                if (url) ppUrl = url
+            } catch {}
 
-        // ===== SEND WELCOME =====
-        await sock.sendMessage(groupId, {
-            image: imageBuffer,
-            caption,
-            mentions: [jid]
-        })
+            // =========================
+            // SEND IMAGE + CAPTION
+            // =========================
+            await sock.sendMessage(groupId, {
+                image: { url: ppUrl },
+                caption,
+                mentions: [jid]
+            })
+
+        } catch (err) {
+            console.error('WELCOME ERROR:', err)
+
+            const jid = typeof p === 'string' ? p : p.id
+            const mentionName = jid.split('@')[0]
+
+            await sock.sendMessage(groupId, {
+                text: `Welcome @${mentionName} to *${groupName}* 👋`,
+                mentions: [jid]
+            })
+        }
     }
 }
 
