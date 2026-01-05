@@ -1,76 +1,94 @@
-const { handleWelcome } = require('../lib/welcome');
-const { isWelcomeOn, getWelcome } = require('../lib/index');
-const { channelInfo } = require('../lib/messageConfig');
+const { handleWelcome } = require('../lib/welcome')
+const { isWelcomeOn, getWelcome } = require('../lib/index')
+const fetch = require('node-fetch')
 
-const FALLBACK_IMAGE = 'https://files.catbox.moe/nwvkbt.png';
-
+// =====================
+// COMMAND SET WELCOME
+// =====================
 async function welcomeCommand(sock, chatId, message) {
     if (!chatId.endsWith('@g.us')) {
-        return sock.sendMessage(chatId, { text: 'This command can only be used in groups.' });
+        await sock.sendMessage(chatId, {
+            text: 'This command can only be used in groups.'
+        })
+        return
     }
 
     const text =
         message.message?.conversation ||
         message.message?.extendedTextMessage?.text ||
-        '';
+        ''
 
-    const matchText = text.split(' ').slice(1).join(' ');
-    await handleWelcome(sock, chatId, message, matchText);
+    const matchText = text.split(' ').slice(1).join(' ')
+    await handleWelcome(sock, chatId, message, matchText)
 }
 
-async function handleJoinEvent(sock, id, participants) {
-    if (!(await isWelcomeOn(id))) return;
+// =====================
+// HANDLE MEMBER JOIN
+// =====================
+async function handleJoinEvent(sock, groupId, participants) {
+    const isEnabled = await isWelcomeOn(groupId)
+    if (!isEnabled) return
 
-    const customMessage = await getWelcome(id);
-    const groupMetadata = await sock.groupMetadata(id);
-    const groupName = groupMetadata.subject;
-    const groupDesc = groupMetadata.desc || 'No description available';
+    const customWelcome = await getWelcome(groupId)
+    const groupMetadata = await sock.groupMetadata(groupId)
+
+    const groupName = groupMetadata.subject
+    const groupDesc = groupMetadata.desc || 'No description available'
 
     for (const participant of participants) {
         const jid =
             typeof participant === 'string'
                 ? participant
-                : participant.id || participant.toString();
+                : participant.id || participant.toString()
 
+        const userNumber = jid.split('@')[0]
+
+        // ===== GET DISPLAY NAME =====
+        let displayName = userNumber
         try {
-            let displayName;
-            try {
-                displayName = await sock.getName(jid);
-            } catch {
-                displayName = jid.split('@')[0];
-            }
+            displayName = await sock.getName(jid)
+        } catch {}
 
-            const finalMessage = customMessage
-                ? customMessage
-                      .replace(/{user}/g, `@${displayName}`)
-                      .replace(/{group}/g, groupName)
-                      .replace(/{description}/g, groupDesc)
-                : `👋 Welcome @${displayName}!\n\nSelamat datang di *${groupName}*\n\n📌 ${groupDesc}`;
+        // ===== BUILD MESSAGE =====
+        let caption
+        if (customWelcome) {
+            caption = customWelcome
+                .replace(/{user}/g, `@${displayName}`)
+                .replace(/{group}/g, groupName)
+                .replace(/{description}/g, groupDesc)
+        } else {
+            caption =
+`👋 Welcome @${displayName}
 
-            let imageBuffer;
+Selamat datang di *${groupName}*
+Semoga betah dan patuhi rules grup ya.
 
-            try {
-                // coba PP user
-                const ppUrl = await sock.profilePictureUrl(jid, 'image');
-                imageBuffer = (await sock.getFile(ppUrl)).data;
-            } catch {
-                // fallback image
-                imageBuffer = (await sock.getFile(FALLBACK_IMAGE)).data;
-            }
-
-            await sock.sendMessage(
-                id,
-                {
-                    image: imageBuffer,
-                    caption: finalMessage,
-                    mentions: [jid],
-                    ...channelInfo
-                }
-            );
-        } catch (err) {
-            console.error('WELCOME ERROR:', err);
+${groupDesc}`
         }
+
+        // ===== GET PROFILE PICTURE =====
+        let imageBuffer
+        try {
+            const ppUrl = await sock.profilePictureUrl(jid, 'image')
+            const res = await fetch(ppUrl)
+            imageBuffer = await res.buffer()
+        } catch {
+            // fallback jika PP private / tidak ada
+            const fallback = 'https://img.pyrocdn.com/dbKUgahg.png'
+            const res = await fetch(fallback)
+            imageBuffer = await res.buffer()
+        }
+
+        // ===== SEND WELCOME =====
+        await sock.sendMessage(groupId, {
+            image: imageBuffer,
+            caption,
+            mentions: [jid]
+        })
     }
 }
 
-module.exports = { welcomeCommand, handleJoinEvent };
+module.exports = {
+    welcomeCommand,
+    handleJoinEvent
+}
